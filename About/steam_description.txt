@@ -1,0 +1,22 @@
+[h1]RimSynapse - WorldNews[/h1]
+[b]Companion Mod for RimSynapse.[/b]
+Makes the RimWorld feel alive, reactive, and historically grounded by acting as the local journalist and gossip mill for the planet. Generates dynamic newspapers based on real events in your game.
+
+[h2]Changelog[/h2]
+[b]v0.4.0[/b]
+- Updated to support RimSynapse Core v0.4.0 (Multi-provider routing and Image generation).
+
+[h2]Compatibility Matrix[/h2]
+[list]
+[*] [b]Royalty DLC:[/b] Compatible and Optional. Generates newspapers tracking royal ascensions and empire news.
+[*] [b]Ideology DLC:[/b] Compatible and Optional. Generates theological debate columns and festival coverage.
+[*] [b]Biotech DLC:[/b] Compatible and Optional. Generates genetic breakthrough and mechanitor threat articles.
+[*] [b]Anomaly DLC:[/b] Compatible and Optional. Generates creepy tabloid stories about void sightings.
+[*] [b]RimSynapse - Factions:[/b] Compatible and Optional. WorldNews will dynamically report on the procedurally generated histories, schisms, and wars of your custom LLM factions.
+[*] [b]RimSynapse - Psychology:[/b] Compatible and Optional. Newspapers will gossip about your colonists' psychological breakdowns and dramatic therapy sessions.
+[/list]
+
+[h2]Requirements[/h2]
+[list]
+[*] [b]RimSynapse - Core[/b] (Must be loaded before this mod)
+[/list]
