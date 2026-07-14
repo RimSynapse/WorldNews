@@ -46,7 +46,7 @@ namespace RimSynapse.WorldNews
             }
         }
 
-        private void TriggerNewspaperGeneration()
+        internal void TriggerNewspaperGeneration()
         {
             // Call the newspaper generator and clear the queue (or clear it after successful generation)
             RimSynapse.WorldNews.Newspaper.SynapseNewspaperGenerator.Generate(unpublishedEvents);
