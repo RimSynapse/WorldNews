@@ -6,6 +6,8 @@ namespace RimSynapse.WorldNews.Models
     {
         public string Headline { get; set; }
         public string Date { get; set; }
+        public float PerceivedWealthDelta { get; set; }
+        public float PerceivedStrengthDelta { get; set; }
         public List<NewspaperStory> Stories { get; set; } = new List<NewspaperStory>();
     }
 

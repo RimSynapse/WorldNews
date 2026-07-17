@@ -23,21 +23,17 @@ You MUST respond in valid JSON matching this schema:
 {
   ""Headline"": ""An overarching dramatic headline for the issue"",
   ""Date"": ""The current date"",
+  ""PerceivedWealthDelta"": 0,
+  ""PerceivedStrengthDelta"": 0,
   ""Stories"": [
     {
       ""Title"": ""Title of story 1"",
       ""Content"": ""Rich flavor text for story 1""
-    },
-    {
-      ""Title"": ""Title of story 2"",
-      ""Content"": ""Rich flavor text for story 2""
-    },
-    {
-      ""Title"": ""Title of story 3"",
-      ""Content"": ""Rich flavor text for story 3""
     }
   ]
-}";
+}
+
+Note on Deltas: Analyze the raw events. If the colony completed a legendary artwork, found gold, or grew significantly, output a positive PerceivedWealthDelta (e.g. 5000 or 15000). If they suffered massive damage or lost weapons, output a negative PerceivedStrengthDelta. These values represent how global factions will alter their perception of the colony based on this news! If the news is neutral, output 0.";
 
             string userMessage = $@"Raw Events:
 - {eventsText}
@@ -74,7 +70,13 @@ Write the newspaper issue based on these events.";
                                     
                                     // Normally we would show the dialog immediately or via a custom letter action.
                                     // For now, let's just log it.
-                                    RimSynapse.SynapseLogger.Message($"[RimSynapse-WorldNews] Newspaper generated: {issue.Headline}");
+                                    RimSynapse.SynapseLogger.Message($"[RimSynapse-WorldNews] Newspaper generated: {issue.Headline} | WealthDelta: {issue.PerceivedWealthDelta} | StrengthDelta: {issue.PerceivedStrengthDelta}");
+
+                                    // Broadcast the knowledge to all factions
+                                    if (issue.PerceivedWealthDelta != 0 || issue.PerceivedStrengthDelta != 0)
+                                    {
+                                        RimSynapse.SynapseCoreContext.BroadcastGlobalKnowledge(issue.PerceivedWealthDelta, issue.PerceivedStrengthDelta);
+                                    }
                                 }
                             }
                         }
