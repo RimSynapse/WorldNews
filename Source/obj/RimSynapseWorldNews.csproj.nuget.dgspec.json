@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\github\\rimsynapse\\WorldNews\\Source\\RimSynapseWorldNews.csproj": {}
+    "d:\\github\\rimsynapse\\WorldNews\\Source\\RimSynapseWorldNews.csproj": {}
   },
   "projects": {
-    "D:\\github\\rimsynapse\\WorldNews\\Source\\RimSynapseWorldNews.csproj": {
+    "d:\\github\\rimsynapse\\WorldNews\\Source\\RimSynapseWorldNews.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\github\\rimsynapse\\WorldNews\\Source\\RimSynapseWorldNews.csproj",
+        "projectUniqueName": "d:\\github\\rimsynapse\\WorldNews\\Source\\RimSynapseWorldNews.csproj",
         "projectName": "RimSynapseWorldNews",
-        "projectPath": "D:\\github\\rimsynapse\\WorldNews\\Source\\RimSynapseWorldNews.csproj",
+        "projectPath": "d:\\github\\rimsynapse\\WorldNews\\Source\\RimSynapseWorldNews.csproj",
         "packagesPath": "C:\\Users\\sealt\\.nuget\\packages\\",
-        "outputPath": "D:\\github\\rimsynapse\\WorldNews\\Source\\obj\\",
+        "outputPath": "d:\\github\\rimsynapse\\WorldNews\\Source\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\sealt\\AppData\\Roaming\\NuGet\\NuGet.Config"
