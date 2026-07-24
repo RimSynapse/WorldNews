@@ -1,0 +1,6 @@
+D:\github\rimsynapse\WorldNews\Assemblies\RimSynapseWorldNews.dll
+D:\github\rimsynapse\WorldNews\Source\obj\Release\RimSynapseWorldNews.csproj.AssemblyReference.cache
+D:\github\rimsynapse\WorldNews\Source\obj\Release\RimSynapseWorldNews.GeneratedMSBuildEditorConfig.editorconfig
+D:\github\rimsynapse\WorldNews\Source\obj\Release\RimSynapseWorldNews.csproj.CoreCompileInputs.cache
+D:\github\rimsynapse\WorldNews\Source\obj\Release\RimSynap.A9385B7A.Up2Date
+D:\github\rimsynapse\WorldNews\Source\obj\Release\RimSynapseWorldNews.dll
