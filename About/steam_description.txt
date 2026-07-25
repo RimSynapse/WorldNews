@@ -1,3 +1,6 @@
+[b]Discord Community:[/b] [url=https://discord.gg/eVBebZ2N9s]https://discord.gg/eVBebZ2N9s[/url]
+[b]Version:[/b] v0.5.1 (Target: RimWorld 1.6)
+
 [h1]RimSynapse - WorldNews[/h1]
 [b]A dynamic newspaper that reports on colony gossip, psychological breaks, and geopolitical shifts using Large Language Models.[/b]
 
@@ -41,6 +44,6 @@ Bring the Rim to life with a local tabloid! WorldNews acts as a dynamic journali
 
 ---
 
-[h2]Open Source & Support[/h2]
+[h2]Open Source and Support[/h2]
 GitHub: [url]https://github.com/RimSynapse/WorldNews[/url]
 Buy me a coffee: [url]https://buymeacoffee.com/archdukejim[/url]
