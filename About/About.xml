@@ -22,7 +22,7 @@
     </loadAfter>
     <description>
 Discord Community: https://discord.gg/eVBebZ2N9s
-Version: v0.5.1 (Target: RimWorld 1.6)
+Version: v0.5.2 (Target: RimWorld 1.6)
 
 RimSynapse - WorldNews
 
@@ -30,6 +30,9 @@ Companion Mod for RimSynapse.
 Makes the RimWorld feel alive, reactive, and historically grounded by acting as the local journalist and gossip mill for the planet. Generates dynamic newspapers based on real events in your game.
 
 --- Changelog ---
+v0.5.2
+- Maintenance release, aligned with Core and Psychology fixes
+- Licence changed to PolyForm Noncommercial 1.0.0
 v0.4.0
 - Updated to support RimSynapse Core v0.4.0 (Multi-provider routing and Image generation).
 
