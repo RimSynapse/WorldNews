@@ -2,6 +2,7 @@
 [b]Version:[/b] v0.5.2 (Target: RimWorld 1.6)
 
 [h1]RimSynapse - WorldNews[/h1]
+[b][url=https://github.com/RimSynapse/WorldNews/wiki]Official Wiki and Documentation[/url][/b]
 [b]A dynamic newspaper that reports on colony gossip, psychological breaks, and geopolitical shifts using Large Language Models.[/b]
 
 Bring the Rim to life with a local tabloid! WorldNews acts as a dynamic journalist, generating newspaper pages based on the actual history, wars, romances, and breakdowns occurring in your game.
