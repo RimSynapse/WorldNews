@@ -13,7 +13,7 @@ The mod implements hooks and trackers on the RimWorld world map to monitor devel
 
 ---
 
-## 2. MCP Tool Endpoints
+## 2. Game Tool Endpoints
 
 The World News submod exposes tools for the LLM Storyteller to query on-demand:
 *   `get_planetary_news_feed`: Returns a chronological log of recent major global events on the planet.
