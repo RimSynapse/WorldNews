@@ -14,16 +14,17 @@ namespace RimSynapse.WorldNews.Patches
             if (pastEvent == null || pastEvent.category != "VisitorRumorSpreading") return;
 
             var newsComp = Find.World?.GetComponent<SynapseWorldNewsWorldComponent>();
-            if (newsComp != null)
-            {
-                string eventString = $"[{GenLocalDate.Twelfth(Find.TickManager.TicksGame)}, {GenLocalDate.Year(Find.TickManager.TicksGame)}] Gossip: {pastEvent.eventDescription}";
-                newsComp.unpublishedEvents.Add(eventString);
+            if (newsComp == null) return;
 
-                if (newsComp.unpublishedEvents.Count >= 4)
-                {
-                    newsComp.TriggerNewspaperGeneration();
-                }
-            }
+            var tm = Find.TickManager;
+            string stamp = tm != null
+                ? $"[{GenLocalDate.Twelfth(tm.TicksGame)}, {GenLocalDate.Year(tm.TicksGame)}]"
+                : "[unknown date]";
+
+            // Through RecordEvent rather than touching the list and re-implementing the threshold:
+            // this copy had its own "count >= 4 then generate" and so bypassed the queue cap, the
+            // publish cooldown and the in-flight guard entirely.
+            newsComp.RecordEvent($"{stamp} Gossip: {pastEvent.eventDescription}");
         }
     }
 }

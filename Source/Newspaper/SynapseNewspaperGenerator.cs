@@ -9,9 +9,21 @@ namespace RimSynapse.WorldNews.Newspaper
 {
     public static class SynapseNewspaperGenerator
     {
-        public static void Generate(List<string> unpublishedEvents)
+        /// <summary>
+        /// Generate an issue from a batch of events.
+        /// </summary>
+        /// <param name="onFinished">
+        /// Invoked on the main thread when the request settles, however it settles. The caller uses
+        /// it to clear its in-flight guard, so it must fire on failure and on a parse error too —
+        /// otherwise one bad response stops the mod publishing for the rest of the game.
+        /// </param>
+        public static void Generate(List<string> unpublishedEvents, Action onFinished = null)
         {
-            if (unpublishedEvents == null || unpublishedEvents.Count == 0) return;
+            if (unpublishedEvents == null || unpublishedEvents.Count == 0)
+            {
+                onFinished?.Invoke();
+                return;
+            }
 
             string eventsText = string.Join("\n- ", unpublishedEvents);
 
@@ -46,6 +58,8 @@ Write the newspaper issue based on these events.";
                 userMessage,
                 result =>
                 {
+                    try
+                    {
                     if (result.success)
                     {
                         try
@@ -84,6 +98,17 @@ Write the newspaper issue based on these events.";
                         {
                             RimSynapse.SynapseLogger.Warn("worldnews", $"[RimSynapse-WorldNews] Failed to parse newspaper: {ex.Message}");
                         }
+                    }
+                    else
+                    {
+                        RimSynapse.SynapseLogger.Warn("worldnews", $"[RimSynapse-WorldNews] Newspaper request failed: {result.content}");
+                    }
+                    }
+                    finally
+                    {
+                        // Always, however this settled. The caller's in-flight guard hangs off this;
+                        // skipping it on the failure path would stop the mod publishing for good.
+                        onFinished?.Invoke();
                     }
                 },
                 new RimSynapse.ChatOptions { priority = 5, requestName = "Newspaper Generation" }
