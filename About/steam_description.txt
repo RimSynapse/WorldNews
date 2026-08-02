@@ -20,8 +20,6 @@ Bring the Rim to life with a local tabloid! WorldNews acts as a dynamic journali
 
 [h2]Roadmap[/h2]
 [list]
-[*] [b]0.6 - Agent and Tool Foundation:[/b] ✅ Delivered in v0.6.0 - the in-game newspaper on Core's engine.
-[*] [b]0.7 - Regions and Territories Compatibility:[/b] Current release - carried forward under the shared infrastructure.
 [*] [b]0.8 - Demographics, News and Narrative Voice:[/b] The newspaper starts reporting the world map - a change feed of borders, outposts and ideology shifts, quest outcomes that become news factions react to, planetary news-feed and settlement-status tools, on-demand lore retrieval, and a dependency on Regions and Territories.
 [*] [b]0.9 - Factions and Living Societies:[/b] Ideological artefacts abroad - the article, the conversion, and the war it might start.
 [*] [b]0.10 - Cross-Mod Capability Passes:[/b] Another pass over how the news draws on every module.
@@ -35,35 +33,7 @@ These ship when they are ready - no dates.
 [*] Moves in step with RimSynapse Core v0.7.0.
 [*] Requires Core v0.7.0; saves and settings carry over unchanged.
 [/list]
-
----
-
-[h2]Changelog (v0.6.1)[/h2]
-[list]
-[*] [b]FIXED - mod list metadata:[/b] The in-game mod list still showed v0.5.2 with no v0.6.0 notes. Version and changelog now agree in every place they are stated.
-[*] [b]Roadmap updated:[/b] 0.7 is now Regions and Territories compatibility - the groundwork the Factions work depends on. Everything after it shifts up one release.
-[/list]
-
----
-[h2]Changelog (v0.6.0)[/h2]
-[list]
-[*] [b]Requires RimSynapse Core v0.6.0.[/b] This release moves in step with Core's Agent and Tool Foundation update - your saves and settings carry over unchanged.
-[*] [b]Documentation:[/b] In-game wiki guides updated; "MCP" renamed to game tools throughout, matching Core's native tool-calling engine.
-[/list]
-
----
-[h2]Changelog (v0.5.2)[/h2]
-[list]
-[*] [b]Maintenance release:[/b] No gameplay changes. Version aligned with the rest of the RimSynapse suite, which carries fixes in Core and Psychology.
-[*] [b]Licence:[/b] Now PolyForm Noncommercial 1.0.0. Free to use, modify and share for any noncommercial purpose.
-[/list]
-
----
-
-[h2]Changelog (v0.5.1)[/h2]
-[list]
-[*] [b]Playtest Improvements:[/b] General stability enhancements and compatibility optimizations for playtesting.
-[/list]
+[b]Full version history:[/b] [url=https://github.com/RimSynapse/WorldNews/wiki/Changelog]github.com/RimSynapse/WorldNews/wiki[/url]
 
 ---
 
