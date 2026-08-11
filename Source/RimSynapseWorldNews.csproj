@@ -30,6 +30,11 @@
             <HintPath>$(RimWorldPath)\RimWorldWin64_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
             <Private>false</Private>
         </Reference>
+        <!-- ImageConversion.LoadImage (Texture2D extension) — decodes PNG bytes for newspaper art. -->
+        <Reference Include="UnityEngine.ImageConversionModule">
+            <HintPath>$(RimWorldPath)\RimWorldWin64_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
         <Reference Include="UnityEngine.TextRenderingModule">
             <HintPath>$(RimWorldPath)\RimWorldWin64_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
             <Private>false</Private>
@@ -44,7 +49,18 @@
             <HintPath>..\..\Core\Assemblies\RimSynapseCore.dll</HintPath>
             <Private>false</Private>
         </Reference>
-        
+
+        <!-- Regions and Territories is an OPTIONAL (soft) dependency: WorldNews reads territory,
+             borders and regional belief from it to report the world map, but must load and run
+             with it absent. Referenced for compile-time types only (Private=false so the DLL is
+             not copied); every call into these types is gated behind RegionsAndTerritoriesBridge,
+             which never touches an R&T type until it has confirmed the mod is loaded. About.xml
+             declares loadAfter (not modDependencies) to match. -->
+        <Reference Include="RimSynapseRegionsAndTerritories">
+            <HintPath>..\..\Regions-and-Territories\Assemblies\RimSynapseRegionsAndTerritories.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+
         <Reference Include="System.Net.Http" />
     </ItemGroup>
 

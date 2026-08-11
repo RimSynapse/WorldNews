@@ -19,6 +19,12 @@
     </modDependencies>
     <loadAfter>
         <li>RimSynapse.Core</li>
+        <!-- Optional (soft) dependency. Not in modDependencies: WorldNews runs without R&T and
+             reports colony-local news as it always has. When R&T IS present it must load first,
+             or WorldNews cannot resolve the R&T types it binds against and its whole assembly is
+             dropped silently. loadAfter only advises the mod manager; Core's SynapseLoadOrderCheck
+             reads this list and reports a wrong order (and correctly ignores it when R&T is absent). -->
+        <li>RimSynapse.RegionsAndTerritories</li>
     </loadAfter>
     <description>
 Discord Community: https://discord.gg/eVBebZ2N9s
@@ -42,6 +48,7 @@ These ship when they are ready - no dates.
 Full version history: https://github.com/RimSynapse/WorldNews/wiki/Changelog
 
 --- Compatibility Matrix ---
+- RimSynapse - Regions and Territories: Recommended and Optional. WorldNews reads its territory, borders and regional beliefs to report the world map - border shifts, new outposts and ideology changes become news. Without it, WorldNews still loads and reports colony-local events as usual; only the world-map coverage stands down.
 - Royalty DLC: Compatible and Optional. Generates newspapers tracking royal ascensions and empire news.
 - Ideology DLC: Compatible and Optional. Generates theological debate columns and festival coverage.
 - Biotech DLC: Compatible and Optional. Generates genetic breakthrough and mechanitor threat articles.

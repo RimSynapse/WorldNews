@@ -39,6 +39,7 @@ These ship when they are ready - no dates.
 
 [h2]Compatibility Matrix[/h2]
 [list]
+[*] [b]RimSynapse - Regions and Territories:[/b] Recommended and Optional. WorldNews reads its territory, borders and regional beliefs to report the world map - border shifts, new outposts and ideology changes become news. Without it, WorldNews still loads and reports colony-local events as usual; only the world-map coverage stands down.
 [*] [b]Royalty DLC:[/b] Compatible and Optional. Generates newspapers tracking royal ascensions and empire news.
 [*] [b]Ideology DLC:[/b] Compatible and Optional. Generates theological debate columns and festival coverage.
 [*] [b]Biotech DLC:[/b] Compatible and Optional. Generates genetic breakthrough and mechanitor threat articles.
