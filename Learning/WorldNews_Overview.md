@@ -10,7 +10,7 @@ Periodically, your colony will receive issues of a global newspaper.
 - **The Main Story**: Often driven by major events from your own colony (like repelling a huge raid, launching a ship, or suffering a catastrophic breakdown).
 - **Secondary Stories**: The LLM fills the rest of the newspaper with stories from other factions, giving you insight into wars, trade deals, and rumors happening off-map.
 
-These newspapers use the asymmetric `Dialog_Newspaper` UI, providing an immersive reading experience.
+These newspapers use the `Dialog_Newspaper` broadsheet UI — masthead, a drop-cap lead story with an illustration, a side rail of secondary stories and short notices, and a rotating advertisement. You open an issue from its "Newspaper Published" letter, and can **export it as a self-contained web page**, **illustrate it** with opt-in images, and — with a comms console — get an advance **breaking-news ticker**. See [The Newspaper: Reading, Sharing and Illustrating](The_Newspaper) for the full walkthrough.
 
 ## Intercepting Visitor Gossip and Rumors
 

@@ -36,7 +36,7 @@ Companion Mod for RimSynapse.
 Makes the RimWorld feel alive, reactive, and historically grounded by acting as the local journalist and gossip mill for the planet. Generates dynamic newspapers based on real events in your game.
 
 --- Roadmap ---
-0.8 - Demographics, News and Narrative Voice: The newspaper starts reporting the world map - a change feed of borders, outposts and ideology shifts, quest outcomes that become news factions react to, planetary news-feed and settlement-status tools, on-demand lore retrieval, and a dependency on Regions and Territories.
+0.8 - Demographics, News and Narrative Voice: A redesigned broadsheet you can export as a self-contained web page, optional AI illustrations, and a comms-gated breaking-news ticker that telegraphs events before they arrive. The newspaper also begins reporting the world map - a change feed of borders, outposts and ideology shifts, and quest outcomes that become news factions react to - alongside a soft dependency on Regions and Territories.
 0.9 - Factions and Living Societies: Ideological artefacts abroad - the article, the conversion, and the war it might start.
 0.10 - Cross-Mod Capability Passes: Another pass over how the news draws on every module.
 These ship when they are ready - no dates.
