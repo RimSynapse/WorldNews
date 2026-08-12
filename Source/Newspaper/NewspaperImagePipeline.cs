@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Verse;
 using RimSynapse.WorldNews.Models;
@@ -66,6 +67,54 @@ namespace RimSynapse.WorldNews.Newspaper
             }
         }
 
+        /// <summary>
+        /// True when publishing should wait: images are enabled and at least one wanted illustration is
+        /// neither already resolved nor already on disk, so a live fetch is required.
+        /// </summary>
+        public static bool WillFetch(NewspaperIssue issue)
+        {
+            if (issue?.Stories == null || !Enabled) return false;
+            foreach (NewspaperStory s in issue.Stories)
+            {
+                if (s == null || !s.WantsImage || s.HasImage) continue;
+                if (!File.Exists(CachePathFor(s.ImagePrompt))) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Resolve every wanted illustration — cache hits instantly, the rest fetched — and invoke
+        /// <paramref name="onDone"/> on the main thread once they have all landed or given up (a 4xx
+        /// decline or timeout gives up and leaves that story text-only). Used to hold publication until
+        /// the pictures are in hand (WorldNews#23).
+        /// </summary>
+        public static void ResolveAndAwait(NewspaperIssue issue, Action onDone)
+        {
+            if (issue?.Stories == null) { onDone?.Invoke(); return; }
+
+            var toFetch = new List<KeyValuePair<NewspaperStory, string>>();
+            foreach (NewspaperStory s in issue.Stories)
+            {
+                if (s == null || !s.WantsImage || s.HasImage) continue;
+                string cache = CachePathFor(s.ImagePrompt);
+                if (File.Exists(cache)) { s.ResolvedImagePath = cache; continue; }
+                if (!Enabled) continue;
+                toFetch.Add(new KeyValuePair<NewspaperStory, string>(s, cache));
+            }
+
+            if (toFetch.Count == 0) { onDone?.Invoke(); return; }
+
+            int[] remaining = { toFetch.Count };
+            foreach (KeyValuePair<NewspaperStory, string> kv in toFetch)
+            {
+                Fetch(kv.Key, kv.Value, () =>
+                {
+                    if (Interlocked.Decrement(ref remaining[0]) == 0)
+                        SynapseGameComponent.Enqueue(() => onDone?.Invoke());
+                });
+            }
+        }
+
         /// <summary>Force a fetch for a prompt regardless of the consent gate — debug validation only.</summary>
         public static void DebugForceFetch(string prompt)
         {
@@ -78,11 +127,11 @@ namespace RimSynapse.WorldNews.Newspaper
             Fetch(new NewspaperStory { Title = "debug", ImagePrompt = prompt }, cache);
         }
 
-        private static void Fetch(NewspaperStory story, string cachePath)
+        private static void Fetch(NewspaperStory story, string cachePath, Action onComplete = null)
         {
             lock (InFlight)
             {
-                if (!InFlight.Add(cachePath)) return; // already downloading this one
+                if (!InFlight.Add(cachePath)) { onComplete?.Invoke(); return; } // already downloading this one
             }
 
             string styled = story.ImagePrompt + ", " + ArtStyle;
@@ -93,18 +142,31 @@ namespace RimSynapse.WorldNews.Newspaper
             {
                 try
                 {
-                    byte[] bytes = await Http.GetByteArrayAsync(url).ConfigureAwait(false);
-                    Directory.CreateDirectory(CacheDir);
+                    using (HttpResponseMessage resp = await Http.GetAsync(url).ConfigureAwait(false))
+                    {
+                        if (resp.IsSuccessStatusCode)
+                        {
+                            byte[] bytes = await resp.Content.ReadAsByteArrayAsync().ConfigureAwait(false);
+                            Directory.CreateDirectory(CacheDir);
 
-                    // Write to a temp file then move, so a half-downloaded file is never seen as a cache hit.
-                    string tmp = cachePath + ".tmp";
-                    File.WriteAllBytes(tmp, bytes);
-                    if (File.Exists(cachePath)) File.Delete(cachePath);
-                    File.Move(tmp, cachePath);
+                            // Temp file then move, so a half-downloaded file is never seen as a cache hit.
+                            string tmp = cachePath + ".tmp";
+                            File.WriteAllBytes(tmp, bytes);
+                            if (File.Exists(cachePath)) File.Delete(cachePath);
+                            File.Move(tmp, cachePath);
 
-                    SynapseGameComponent.Enqueue(() => story.ResolvedImagePath = cachePath);
-                    RimSynapse.SynapseLogger.Message(
-                        $"[RimSynapse-WorldNews] Newspaper image ready ({bytes.Length / 1024} KB): {Path.GetFileName(cachePath)}");
+                            SynapseGameComponent.Enqueue(() => story.ResolvedImagePath = cachePath);
+                            RimSynapse.SynapseLogger.Message(
+                                $"[RimSynapse-WorldNews] Newspaper image ready ({bytes.Length / 1024} KB): {Path.GetFileName(cachePath)}");
+                        }
+                        else
+                        {
+                            // Service declined (e.g. 4xx) — give up on this picture and publish text-only
+                            // rather than holding the paper indefinitely.
+                            RimSynapse.SynapseLogger.Warn("worldnews",
+                                $"[RimSynapse-WorldNews] Newspaper image declined ({(int)resp.StatusCode}), text-only: {story.ImagePrompt}");
+                        }
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -114,6 +176,7 @@ namespace RimSynapse.WorldNews.Newspaper
                 finally
                 {
                     lock (InFlight) { InFlight.Remove(cachePath); }
+                    onComplete?.Invoke();
                 }
             });
         }

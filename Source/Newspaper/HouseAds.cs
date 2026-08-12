@@ -17,17 +17,17 @@ namespace RimSynapse.WorldNews.Newspaper
     {
         private static readonly NewspaperAd[] Pool =
         {
-            new NewspaperAd { Advertiser = "Randy's Discount Cryptosleep",
+            new NewspaperAd { Advertiser = "Randy's Discount Cryptosleep", ImageFile = "cryptosleep.png",
                 Copy = "You'll wake up eventually. Probably. No refunds on the caskets." },
-            new NewspaperAd { Advertiser = "Muffalo Wool Emporium",
+            new NewspaperAd { Advertiser = "Muffalo Wool Emporium", ImageFile = "muffalo.png",
                 Copy = "Warm, hardy, hypoallergenic — unlike its former owner. Fifteen silver the bolt." },
-            new NewspaperAd { Advertiser = "Glitterworld Medicine (Definitely Not Expired)",
+            new NewspaperAd { Advertiser = "Glitterworld Medicine (Definitely Not Expired)", ImageFile = "medicine.png",
                 Copy = "Cures what ails ye, and three things that don't. Ask the man in black." },
-            new NewspaperAd { Advertiser = "Boomalope Dairy Co.",
+            new NewspaperAd { Advertiser = "Boomalope Dairy Co.", ImageFile = "boomalope.png",
                 Copy = "Milk 'em gentle. We are not liable for the crater." },
-            new NewspaperAd { Advertiser = "Joywire & Sons, Neuro-Fitters",
+            new NewspaperAd { Advertiser = "Joywire & Sons, Neuro-Fitters", ImageFile = "joywire.png",
                 Copy = "Why feel anything at all? Installation while-u-wait." },
-            new NewspaperAd { Advertiser = "Thrumbo Insurance Group",
+            new NewspaperAd { Advertiser = "Thrumbo Insurance Group", ImageFile = "thrumbo.png",
                 Copy = "One horn. One premium. No survivors to file a claim." },
             new NewspaperAd { Advertiser = "Aunt Cassandra's Preserves",
                 Copy = "Put up for the long dark. Tight schedule, tighter lids." },
@@ -37,11 +37,11 @@ namespace RimSynapse.WorldNews.Newspaper
                 Copy = "Now in seventeen shades of caution yellow." },
             new NewspaperAd { Advertiser = "Nutrient Paste — Family Recipe",
                 Copy = "It's food. It's grey. It's ready. Stop asking what's in it." },
-            new NewspaperAd { Advertiser = "The Cannibal's Cookbook, 3rd Ed.",
+            new NewspaperAd { Advertiser = "The Cannibal's Cookbook, 3rd Ed.", ImageFile = "skull.png",
                 Copy = "Now with a chapter on presentation. Guests optional." },
             new NewspaperAd { Advertiser = "Yayo? We Barely Know Yo",
                 Copy = "Recreational chemistry for the discerning colonist. Discretion assured." },
-            new NewspaperAd { Advertiser = "Deep Drill Timeshares",
+            new NewspaperAd { Advertiser = "Deep Drill Timeshares", ImageFile = "drill.png",
                 Copy = "Strike ore, or strike bugs. Either way, you'll strike something." },
             new NewspaperAd { Advertiser = "Empire Surplus Outlet",
                 Copy = "Genuine cataphract plate, only lightly haunted. Titles sold separately." },
@@ -53,9 +53,9 @@ namespace RimSynapse.WorldNews.Newspaper
                 Copy = "If it has teeth, we'll make it a friend. Waivers at the door." },
             new NewspaperAd { Advertiser = "Cryptosleep Singles",
                 Copy = "Meet someone special. They'll still be here in a decade. Guaranteed." },
-            new NewspaperAd { Advertiser = "Sun Lamp Tanning Salon",
+            new NewspaperAd { Advertiser = "Sun Lamp Tanning Salon", ImageFile = "sunlamp.png",
                 Copy = "That healthy hydroponic glow, without the potatoes." },
-            new NewspaperAd { Advertiser = "Steel & Silver Pawnbrokers",
+            new NewspaperAd { Advertiser = "Steel & Silver Pawnbrokers", ImageFile = "pawnbroker.png",
                 Copy = "We buy anything not currently on fire." },
         };
 
@@ -67,7 +67,17 @@ namespace RimSynapse.WorldNews.Newspaper
         {
             int i = ((index % Pool.Length) + Pool.Length) % Pool.Length;
             NewspaperAd t = Pool[i];
-            return new NewspaperAd { Advertiser = t.Advertiser, Copy = t.Copy };
+            return new NewspaperAd { Advertiser = t.Advertiser, Copy = t.Copy, ImageFile = t.ImageFile };
+        }
+
+        /// <summary>Absolute path to an ad's bundled brand mark, or null if it has none / the mod root
+        /// is unknown. Resolved off the loaded WorldNews folder like the sample illustrations.</summary>
+        public static string BrandImagePath(NewspaperAd ad)
+        {
+            if (ad == null || string.IsNullOrEmpty(ad.ImageFile)) return null;
+            string root = RimSynapseWorldNewsMod.ContentRootDir;
+            if (string.IsNullOrEmpty(root)) return null;
+            return System.IO.Path.Combine(root, "Textures", "WorldNews", "Ads", ad.ImageFile);
         }
 
         /// <summary>The in-game week number since game start (7 days per week).</summary>

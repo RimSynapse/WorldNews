@@ -138,7 +138,11 @@ namespace RimSynapse.WorldNews.Newspaper
             {
                 foreach (NewspaperAd ad in issue.Ads)
                 {
-                    sb.Append("<section class=\"ad\"><div class=\"adv\">").Append(Esc(ad.Advertiser))
+                    sb.Append("<section class=\"ad\">");
+                    string brandUri = DataUri(HouseAds.BrandImagePath(ad));
+                    if (brandUri != null)
+                        sb.Append("<img class=\"brand\" alt=\"\" src=\"").Append(brandUri).Append("\">");
+                    sb.Append("<div class=\"adv\">").Append(Esc(ad.Advertiser))
                       .Append("</div><div class=\"copy\">").Append(Esc(ad.Copy)).Append("</div></section>");
                 }
             }
@@ -243,6 +247,7 @@ figcaption{ font-style:italic; color:var(--muted); font-size:12px; text-align:ce
 .inbrief h4{ margin:8px 0 2px; font-size:14px; }
 .inbrief p{ margin:0; font-size:13px; color:var(--muted); }
 .ad{ border:1px solid var(--ink); padding:14px; margin-bottom:14px; text-align:center; }
+.ad .brand{ width:60px; height:60px; object-fit:contain; display:block; margin:0 auto 6px; }
 .ad .adv{ font-size:17px; font-weight:bold; }
 .ad .copy{ font-size:13px; font-style:italic; color:var(--muted); padding-top:4px; }
 footer{ display:flex; justify-content:space-between; font-size:12px; color:var(--muted);

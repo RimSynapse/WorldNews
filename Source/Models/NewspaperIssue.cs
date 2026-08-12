@@ -109,5 +109,15 @@ namespace RimSynapse.WorldNews.Models
     {
         public string Advertiser { get; set; }
         public string Copy { get; set; }
+
+        /// <summary>
+        /// Optional bundled black-and-white brand mark for this ad — a file basename under
+        /// <c>Textures/WorldNews/Ads/</c>. Set on house ads that ship with art; null for plain/LLM ads.
+        /// </summary>
+        public string ImageFile { get; set; }
+
+        /// <summary>True when this ad ships a brand mark.</summary>
+        [JsonIgnore]
+        public bool HasBrandImage => !string.IsNullOrEmpty(ImageFile);
     }
 }

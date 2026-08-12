@@ -449,6 +449,17 @@ namespace RimSynapse.WorldNews.UI
                     y += RenderBoxedSection(x, y, w, null, draw, (ix, iy, iw, idraw) =>
                     {
                         float yy = iy;
+
+                        // Bundled black-and-white brand mark, centred above the advertiser (half the ads).
+                        Texture2D brand = NewspaperImageCache.Get(HouseAds.BrandImagePath(ad));
+                        if (brand != null)
+                        {
+                            const float mark = 52f;
+                            var mr = new Rect(ix + (iw - mark) / 2f, yy, mark, mark);
+                            if (idraw) GUI.DrawTexture(mr, brand, ScaleMode.ScaleToFit);
+                            yy += mark + 4f;
+                        }
+
                         yy += Para(ix, yy, iw, ad.Advertiser, GameFont.Small, InkColor, TextAnchor.MiddleCenter, idraw);
                         yy += 2f;
                         yy += Para(ix, yy, iw, ad.Copy, GameFont.Tiny, MutedInk, TextAnchor.MiddleCenter, idraw);

@@ -81,67 +81,90 @@ Write the newspaper issue based on these events.";
                 userMessage,
                 result =>
                 {
-                    try
+                    if (!result.success)
                     {
-                    if (result.success)
+                        RimSynapse.SynapseLogger.Warn("worldnews", $"[RimSynapse-WorldNews] Newspaper request failed: {result.content}");
+                        onFinished?.Invoke();
+                        return;
+                    }
+
+                    NewspaperIssue issue = null;
+                    try { issue = ParseIssue(result.content); }
+                    catch (Exception ex)
                     {
-                        try
+                        RimSynapse.SynapseLogger.Warn("worldnews", $"[RimSynapse-WorldNews] Failed to parse newspaper: {ex.Message}");
+                    }
+
+                    // Never publish an empty paper — no headline, or no story with any body text. This is
+                    // how a stray/mocked/thin response stops producing blank issues on load and in tests.
+                    if (!HasPublishableContent(issue))
+                    {
+                        RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] Newspaper skipped — no publishable content this cycle.");
+                        onFinished?.Invoke();
+                        return;
+                    }
+
+                    string issueJson = RimSynapse.Utils.JsonHelper.ExtractJson(result.content);
+
+                    // Hold publication until illustrations arrive (WorldNews#23): when images are enabled
+                    // and the issue wants pictures, fetch them first and publish once they land. A declined
+                    // fetch (4xx) or a timeout publishes text-only rather than waiting forever.
+                    if (NewspaperImagePipeline.WillFetch(issue))
+                    {
+                        NewspaperImagePipeline.ResolveAndAwait(issue, () =>
                         {
-                            var issue = ParseIssue(result.content);
-                            if (issue != null)
-                            {
-                                // Publish a letter whose "Read newspaper" choice opens the broadsheet.
-                                // The source JSON travels on the letter so it survives a save/reload;
-                                // store the extracted JSON (pre house-ad), since ParseIssue re-adds the
-                                // house ad on read — storing the parsed issue would double it.
-                                string issueJson = RimSynapse.Utils.JsonHelper.ExtractJson(result.content);
-                                var letter = new UI.Letter_Newspaper
-                                {
-                                    def = LetterDefOf.PositiveEvent,
-                                    Label = "Newspaper Published: " + issue.Headline,
-                                    Text = "A new issue of the local newspaper has been published. "
-                                         + "Read all about it.",
-                                    ID = Find.UniqueIDsManager.GetNextLetterID(),
-                                };
-                                letter.SetIssue(issue, issueJson);
-                                Find.LetterStack.ReceiveLetter(letter);
-
-                                // First-run onboarding: the first published issue asks, once, whether to
-                                // illustrate the paper via the external image service (WorldNews#24).
-                                if (RimSynapseWorldNewsMod.Settings != null
-                                    && !RimSynapseWorldNewsMod.Settings.imageConsentDecided)
-                                {
-                                    Find.WindowStack.Add(new RimSynapse.WorldNews.UI.Dialog_NewspaperImageConsent());
-                                }
-
-                                RimSynapse.SynapseLogger.Message($"[RimSynapse-WorldNews] Newspaper generated: {issue.Headline} | WealthDelta: {issue.PerceivedWealthDelta} | StrengthDelta: {issue.PerceivedStrengthDelta}");
-
-                                // Broadcast the knowledge to all factions
-                                if (issue.PerceivedWealthDelta != 0 || issue.PerceivedStrengthDelta != 0)
-                                {
-                                    RimSynapse.SynapseCoreContext.BroadcastGlobalKnowledge(issue.PerceivedWealthDelta, issue.PerceivedStrengthDelta);
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            RimSynapse.SynapseLogger.Warn("worldnews", $"[RimSynapse-WorldNews] Failed to parse newspaper: {ex.Message}");
-                        }
+                            PublishIssue(issue, issueJson);
+                            onFinished?.Invoke();
+                        });
                     }
                     else
                     {
-                        RimSynapse.SynapseLogger.Warn("worldnews", $"[RimSynapse-WorldNews] Newspaper request failed: {result.content}");
-                    }
-                    }
-                    finally
-                    {
-                        // Always, however this settled. The caller's in-flight guard hangs off this;
-                        // skipping it on the failure path would stop the mod publishing for good.
+                        PublishIssue(issue, issueJson);
                         onFinished?.Invoke();
                     }
                 },
                 new RimSynapse.ChatOptions { priority = 5, requestName = "Newspaper Generation" }
             );
+        }
+
+        /// <summary>An issue is publishable only with a headline and at least one story that has body text.</summary>
+        private static bool HasPublishableContent(NewspaperIssue issue)
+        {
+            if (issue == null || string.IsNullOrWhiteSpace(issue.Headline) || issue.Stories == null) return false;
+            foreach (NewspaperStory s in issue.Stories)
+            {
+                if (s != null && !string.IsNullOrWhiteSpace(s.Content)) return true;
+            }
+            return false;
+        }
+
+        /// <summary>Send the "Newspaper Published" letter and broadcast its perception deltas.</summary>
+        private static void PublishIssue(NewspaperIssue issue, string issueJson)
+        {
+            // The source JSON travels on the letter so it survives a save/reload; store the extracted
+            // JSON (pre house-ad), since ParseIssue re-adds the house ad on read.
+            var letter = new UI.Letter_Newspaper
+            {
+                def = LetterDefOf.PositiveEvent,
+                Label = "Newspaper Published: " + issue.Headline,
+                Text = "A new issue of the local newspaper has been published. Read all about it.",
+                ID = Find.UniqueIDsManager.GetNextLetterID(),
+            };
+            letter.SetIssue(issue, issueJson);
+            Find.LetterStack.ReceiveLetter(letter);
+
+            // First-run onboarding: the first published issue asks, once, about external illustrations.
+            if (RimSynapseWorldNewsMod.Settings != null && !RimSynapseWorldNewsMod.Settings.imageConsentDecided)
+            {
+                Find.WindowStack.Add(new RimSynapse.WorldNews.UI.Dialog_NewspaperImageConsent());
+            }
+
+            RimSynapse.SynapseLogger.Message($"[RimSynapse-WorldNews] Newspaper published: {issue.Headline} | WealthDelta: {issue.PerceivedWealthDelta} | StrengthDelta: {issue.PerceivedStrengthDelta}");
+
+            if (issue.PerceivedWealthDelta != 0 || issue.PerceivedStrengthDelta != 0)
+            {
+                RimSynapse.SynapseCoreContext.BroadcastGlobalKnowledge(issue.PerceivedWealthDelta, issue.PerceivedStrengthDelta);
+            }
         }
 
         /// <summary>
