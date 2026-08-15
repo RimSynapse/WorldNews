@@ -1,5 +1,5 @@
 [b]Discord Community:[/b] [url=https://discord.gg/eVBebZ2N9s]https://discord.gg/eVBebZ2N9s[/url]
-[b]Version:[/b] v0.7.0 (Target: RimWorld 1.6)
+[b]Version:[/b] v0.8.0 (Target: RimWorld 1.6)
 
 [h1]RimSynapse - WorldNews[/h1]
 [b][url=https://github.com/RimSynapse/WorldNews/wiki]Official Wiki and Documentation[/url][/b]
@@ -20,13 +20,19 @@ Bring the Rim to life with a local tabloid! WorldNews acts as a dynamic journali
 
 [h2]Roadmap[/h2]
 [list]
-[*] [b]0.8 - Demographics, News and Narrative Voice:[/b] A redesigned broadsheet you can export as a self-contained web page, optional AI illustrations, and a comms-gated breaking-news ticker that telegraphs events before they arrive. The newspaper also begins reporting the world map - a change feed of borders, outposts and ideology shifts, and quest outcomes that become news factions react to - alongside a soft dependency on Regions and Territories.
 [*] [b]0.9 - Factions and Living Societies:[/b] Ideological artefacts abroad - the article, the conversion, and the war it might start.
 [*] [b]0.10 - Cross-Mod Capability Passes:[/b] Another pass over how the news draws on every module.
 [/list]
 These ship when they are ready - no dates.
 
 ---
+
+[h2]Changelog (v0.8.0) - The Colony Newspaper[/h2]
+[list]
+[*] NEW - The colony newspaper: WorldNews now renders a full newspaper issue from a single model, in-game and as a shareable HTML export.
+[*] NEW - Optional AI-generated images for newspaper stories (opt-in), plus a configurable banner.
+[*] The newspaper wires into Core's deferred-letter pipeline; publishing holds for images, empty papers are guarded, and ad art renders in black and white.
+[/list]
 
 [h2]Changelog (v0.7.0) - Regions and Territories Compatibility[/h2]
 [list]
