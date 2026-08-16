@@ -42,6 +42,25 @@ namespace RimSynapse.WorldNews
         {
         }
 
+        /// <summary>Not saved: forces a publish-timer settle on the first tick after every load / new game.</summary>
+        private bool settled;
+
+        /// <summary>
+        /// Settle the publish timer to "now" on the first tick of a session, so an issue can never fire
+        /// the instant the map loads — a paper on colony load (often empty, from mocked/thin responses in
+        /// tests) is never wanted. The first real issue then waits at least <see cref="MinTicksBetweenIssues"/>.
+        /// </summary>
+        public override void WorldComponentTick()
+        {
+            base.WorldComponentTick();
+            if (!settled)
+            {
+                settled = true;
+                lastIssueTick = Find.TickManager?.TicksGame ?? 0;
+                generationInFlight = false;
+            }
+        }
+
         public override void ExposeData()
         {
             base.ExposeData();

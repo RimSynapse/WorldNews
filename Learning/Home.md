@@ -4,5 +4,6 @@ Welcome to the documentation for the **RimSynapse WorldNews** module. Below is a
 
 ## Table of Contents
 
-- [Planetary News Feed And World Events](Planetary_News_Feed_and_World_Events)
 - [WorldNews Overview](WorldNews_Overview)
+- [The Newspaper: Reading, Sharing and Illustrating](The_Newspaper)
+- [Planetary News Feed And World Events](Planetary_News_Feed_and_World_Events)

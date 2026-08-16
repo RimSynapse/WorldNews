@@ -4,7 +4,7 @@
     <author>RimSynapse Team</author>
     <packageId>RimSynapse.WorldNews</packageId>
     <url>https://github.com/RimSynapse/WorldNews</url>
-    <modVersion>0.7.0</modVersion>
+    <modVersion>0.8.0</modVersion>
     <supportedVersions>
         <li>1.5</li>
         <li>1.6</li>
@@ -19,10 +19,16 @@
     </modDependencies>
     <loadAfter>
         <li>RimSynapse.Core</li>
+        <!-- Optional (soft) dependency. Not in modDependencies: WorldNews runs without R&T and
+             reports colony-local news as it always has. When R&T IS present it must load first,
+             or WorldNews cannot resolve the R&T types it binds against and its whole assembly is
+             dropped silently. loadAfter only advises the mod manager; Core's SynapseLoadOrderCheck
+             reads this list and reports a wrong order (and correctly ignores it when R&T is absent). -->
+        <li>RimSynapse.RegionsAndTerritories</li>
     </loadAfter>
     <description>
 Discord Community: https://discord.gg/eVBebZ2N9s
-Version: v0.7.0 (Target: RimWorld 1.6)
+Version: v0.8.0 (Target: RimWorld 1.6)
 
 RimSynapse - WorldNews
 
@@ -30,31 +36,23 @@ Companion Mod for RimSynapse.
 Makes the RimWorld feel alive, reactive, and historically grounded by acting as the local journalist and gossip mill for the planet. Generates dynamic newspapers based on real events in your game.
 
 --- Roadmap ---
-0.6 - Agent and Tool Foundation: delivered in v0.6.0.
-0.7 - Regions and Territories Compatibility: basic pass-through alongside Empire Refactored and World Domination. Territories set tax rates; the regular game mechanics are left alone.
-0.8 - Demographics, News and Narrative Voice: regional ideology and new map overlays, a newspaper driven by what actually happens on the world map, Aura's own personality, and local text-to-speech.
-0.9 - Factions and Living Societies: state ideologies, conversion and ideological spread, ideological sites and spies - building toward living NPC societies.
-0.10 - Cross-Mod Capability Passes: bringing every module back together for another pass over what the whole set can do.
+0.9 - Factions and Living Societies: Ideological artefacts abroad - the article, the conversion, and the war it might start.
+0.10 - Cross-Mod Capability Passes: Another pass over how the news draws on every module.
 These ship when they are ready - no dates.
 
---- Changelog ---
-v0.7.0 - Regions and Territories Compatibility
+--- Changelog (v0.8.0) - The Colony Newspaper ---
+- NEW - The colony newspaper: WorldNews now renders a full newspaper issue from a single model, in-game and as a shareable HTML export.
+- NEW - Optional AI-generated images for newspaper stories (opt-in), plus a configurable banner.
+- The newspaper wires into Core's deferred-letter pipeline; publishing holds for images, empty papers are guarded, and ad art renders in black and white.
+
+--- Changelog (v0.7.0) - Regions and Territories Compatibility ---
 - Moves in step with RimSynapse Core v0.7.0.
 - Requires Core v0.7.0; saves and settings carry over unchanged.
-v0.6.1
-- Fixed: the in-game mod list showed v0.5.2 with no 0.6.0 notes; version and changelog now agree everywhere
-- Roadmap updated: 0.7 is Regions and Territories compatibility (groundwork for Factions, which will require Empire)
-v0.6.0
-- Moves in step with RimSynapse Core v0.6.0 (Agent and Tool Foundation)
-- Requires Core v0.6.0; saves and settings carry over unchanged
-- In-game wiki guides updated; "MCP" renamed to game tools throughout
-v0.5.2
-- Maintenance release, aligned with Core and Psychology fixes
-- Licence changed to PolyForm Noncommercial 1.0.0
-v0.4.0
-- Updated to support RimSynapse Core v0.4.0 (Multi-provider routing and Image generation).
+
+Full version history: https://github.com/RimSynapse/WorldNews/wiki/Changelog
 
 --- Compatibility Matrix ---
+- RimSynapse - Regions and Territories: Recommended and Optional. WorldNews reads its territory, borders and regional beliefs to report the world map - border shifts, new outposts and ideology changes become news. Without it, WorldNews still loads and reports colony-local events as usual; only the world-map coverage stands down.
 - Royalty DLC: Compatible and Optional. Generates newspapers tracking royal ascensions and empire news.
 - Ideology DLC: Compatible and Optional. Generates theological debate columns and festival coverage.
 - Biotech DLC: Compatible and Optional. Generates genetic breakthrough and mechanitor threat articles.
