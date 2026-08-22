@@ -1,4 +1,5 @@
 using Verse;
+using RimWorld;
 using HarmonyLib;
 
 namespace RimSynapse.WorldNews
@@ -78,6 +79,71 @@ namespace RimSynapse.WorldNews
             UnityEngine.GUI.color = new UnityEngine.Color(0.7f, 0.7f, 0.7f);
             ls.Label(status);
             UnityEngine.GUI.color = UnityEngine.Color.white;
+
+            // --- World-map news (WorldNews#13) ----------------------------------------------------
+            ls.Gap(14f);
+            UnityEngine.GUI.color = new UnityEngine.Color(0.85f, 0.85f, 0.85f);
+            ls.Label("World-map news");
+            UnityEngine.GUI.color = UnityEngine.Color.white;
+            ls.GapLine(6f);
+
+            bool rtActive = Integration.RegionsAndTerritoriesBridge.Active;
+            if (!rtActive)
+            {
+                UnityEngine.GUI.color = new UnityEngine.Color(0.7f, 0.7f, 0.7f);
+                ls.Label("Regions and Territories is not loaded — world-map coverage stands down; only "
+                         + "colony-local news is reported. The toggles below take effect when it is present.");
+                UnityEngine.GUI.color = UnityEngine.Color.white;
+            }
+
+            ls.CheckboxLabeled("Report world-map changes as news",
+                ref Settings.enableWorldMapFeed,
+                "Master switch. When on (and Regions and Territories is loaded), the newspaper draws on "
+                + "changes across the world map — not just events in your colony.");
+
+            if (Settings.enableWorldMapFeed)
+            {
+                ls.CheckboxLabeled("  Border changes",
+                    ref Settings.detectBorderChanges,
+                    "A region changing hands, or a contested frontier settling in someone's favour.");
+                ls.CheckboxLabeled("  New settlements",
+                    ref Settings.detectSettlementFounded,
+                    "A new settlement or outpost appearing in a region.");
+                ls.CheckboxLabeled("  Border tension",
+                    ref Settings.detectBorderTension,
+                    "Two hostile factions pressing competing claims on the same frontier — a forward-looking "
+                    + "'what might happen next' story rather than a report of something already done.");
+                ls.CheckboxLabeled("  Quest outcomes",
+                    ref Settings.detectQuestOutcomes,
+                    "When a quest resolves in a claimed region, the factions who hold that ground react to how "
+                    + "it turned out — the neighbours have opinions, not just the quest giver.");
+
+                bool ideologyDisabled = true; // gated: no regional belief distribution yet (R&T#34)
+                bool prevIdeology = Settings.detectIdeologyShift;
+                ls.CheckboxLabeled("  Regional ideology shifts (coming soon)",
+                    ref Settings.detectIdeologyShift,
+                    "A region's dominant belief changing. Requires a regional belief distribution that is "
+                    + "not yet available, so this produces nothing today.");
+                if (ideologyDisabled && Settings.detectIdeologyShift && !prevIdeology)
+                {
+                    // Let the player express intent, but it stays inert until R&T#34 lands.
+                    Messages.Message("Regional ideology shifts are not yet available — no articles will be "
+                        + "generated for them until a future update.", MessageTypeDefOf.RejectInput, false);
+                }
+            }
+
+            // --- Settlement affairs (day-in-the-life NPC events) ----------------------------------
+            ls.Gap(14f);
+            UnityEngine.GUI.color = new UnityEngine.Color(0.85f, 0.85f, 0.85f);
+            ls.Label("Settlement affairs");
+            UnityEngine.GUI.color = UnityEngine.Color.white;
+            ls.GapLine(6f);
+            ls.CheckboxLabeled("Non-player settlements have eventful days",
+                ref Settings.enableSettlementAffairs,
+                "Each day, a fraction of non-player settlements generate a small adjudicated event — a "
+                + "raid, a caravan, a festival, an outbreak. Conflict outcomes nudge the two factions' "
+                + "standing by a bounded amount that fades over a few days; it never rewrites their "
+                + "long-term relationship. Pure flavour for the newspaper; needs no other mods.");
 
             ls.End();
             base.DoSettingsWindowContents(inRect);
