@@ -1,5 +1,5 @@
 [b]Discord Community:[/b] [url=https://discord.gg/eVBebZ2N9s]https://discord.gg/eVBebZ2N9s[/url]
-[b]Version:[/b] v0.8.0 (Target: RimWorld 1.6)
+[b]Version:[/b] v0.9.0 (Target: RimWorld 1.6)
 
 [h1]RimSynapse - WorldNews[/h1]
 [b][url=https://github.com/RimSynapse/WorldNews/wiki]Official Wiki and Documentation[/url][/b]
@@ -20,10 +20,20 @@ Bring the Rim to life with a local tabloid! WorldNews acts as a dynamic journali
 
 [h2]Roadmap[/h2]
 [list]
-[*] [b]0.9 - Factions and Living Societies:[/b] Ideological artefacts abroad - the article, the conversion, and the war it might start.
-[*] [b]0.10 - Cross-Mod Capability Passes:[/b] Another pass over how the news draws on every module.
+[*] [b]0.10 - Cross-Mod Capability Passes:[/b] event-driven publication cadence, on-demand news tools for the LLM, comms-console delivery, and another pass over how the news draws on every module.
+[*] [b]Future - Ideological artefacts abroad:[/b] the article, the conversion, and the war it might start (awaiting a regional belief model).
 [/list]
 These ship when they are ready - no dates.
+
+---
+
+[h2]Changelog (v0.9.0) - The Newspaper Reports the World[/h2]
+[list]
+[*] NEW - World-map news: the newspaper now reports changes across the planet, not just your colony - regions changing hands, new settlements founded, and rising tension between hostile neighbours who share a frontier (with Regions and Territories).
+[*] NEW - Quest outcomes become news: when a quest resolves, the factions whose territory it happened in react to how it turned out - the neighbours have opinions, not just the quest giver.
+[*] NEW - Settlement affairs: non-player settlements have eventful days - raids, caravans, festivals, outbreaks - and conflict outcomes nudge the two factions' short-term standing by a small, temporary amount that fades over a few days.
+[*] Every world-map detector is individually toggleable in settings, and all world-map coverage stands down cleanly when Regions and Territories is absent.
+[/list]
 
 ---
 

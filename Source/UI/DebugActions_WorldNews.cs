@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using LudeonTK;
 using RimWorld;
 using Verse;
+using RimWorld.Planet;
 using RimSynapse.WorldNews.Integration;
 using RimSynapse.WorldNews.Models;
 using RimSynapse.WorldNews.Newspaper;
@@ -298,6 +300,245 @@ namespace RimSynapse.WorldNews.UI
                     "[RimSynapse-WorldNews] R&T seam INACTIVE — Regions and Territories is not loaded; " +
                     "world-map coverage stands down and only colony-local news is reported.");
             }
+        }
+
+        // ---- World-map change feed (WorldNews#13) ------------------------------------------------
+        //
+        // Validation deliverables for the world-map feed. "Dump" and "run a pass" observe the live
+        // mechanic; the three "force" actions inject a synthetic diff so each event kind can be walked
+        // end to end — detector → feed dedup → flatten into the newspaper queue — without waiting for
+        // the world map to actually change. All are headlessly runnable via run_debug_action.
+
+        private static SynapseWorldNewsWorldComponent Component()
+            => Find.World?.GetComponent<SynapseWorldNewsWorldComponent>();
+
+        [DebugAction("RimSynapse", "WorldNews: dump world-map feed",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void DumpWorldMapFeed()
+        {
+            var comp = Component();
+            if (comp == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] No world component."); return; }
+
+            var sb = new StringBuilder();
+            bool rt = RegionsAndTerritoriesBridge.Active;
+            sb.AppendLine($"[RimSynapse-WorldNews] World-map feed: {comp.worldFeed.Count} event(s); R&T active={rt}; " +
+                          $"queued news lines={comp.unpublishedEvents.Count}.");
+            IReadOnlyList<WorldNewsEvent> events = comp.worldFeed.Events;
+            for (int i = 0; i < events.Count; i++)
+            {
+                var e = events[i];
+                sb.AppendLine($"  [{i,2}] {e.kind} @tick {e.ticksGame} region=\"{e.regionName}\" : {e.ToNewsLine()}");
+            }
+            RimSynapse.SynapseLogger.Message(sb.ToString());
+        }
+
+        [DebugAction("RimSynapse", "WorldNews: run world-map detection pass now",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void RunWorldMapDetectionPass()
+        {
+            var comp = Component();
+            if (comp == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] No world component."); return; }
+
+            int accepted = comp.SampleWorldMap();
+            RimSynapse.SynapseLogger.Message(
+                $"[RimSynapse-WorldNews] Detection pass complete: {accepted} new event(s) accepted; " +
+                $"feed now holds {comp.worldFeed.Count}. (First pass of a session only baselines and emits 0.)");
+        }
+
+        [DebugAction("RimSynapse", "WorldNews: force synthetic border-change event",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void ForceBorderChangeEvent()
+        {
+            var comp = Component();
+            if (comp == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] No world component."); return; }
+
+            var before = new List<ProvinceSnapshot> { new ProvinceSnapshot {
+                provinceId = -9001, regionName = "Redwater Basin",
+                primaryOwnerId = "SynthFactionA", primaryOwnerName = "the Kanou Tribe" } };
+            var after = new List<ProvinceSnapshot> { new ProvinceSnapshot {
+                provinceId = -9001, regionName = "Redwater Basin",
+                primaryOwnerId = "SynthFactionB", primaryOwnerName = "the New Arbor Confederacy" } };
+
+            int now = Find.TickManager != null ? Find.TickManager.TicksGame : 0;
+            var events = WorldMapChangeDetector.DetectBorderChanges(before, after, now);
+            ReportForced("border-change", comp, events);
+        }
+
+        [DebugAction("RimSynapse", "WorldNews: force synthetic border-tension event",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void ForceBorderTensionEvent()
+        {
+            var comp = Component();
+            if (comp == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] No world component."); return; }
+
+            var snap = new List<ProvinceSnapshot> { new ProvinceSnapshot {
+                provinceId = -9002, regionName = "Ashfall Marches", contested = true,
+                contenderIds = { }, contenderNames = { } } };
+            snap[0].contenderIds.AddRange(new[] { "SynthFactionX", "SynthFactionY" });
+            snap[0].contenderNames.AddRange(new[] { "the Iron Compact", "the Verdant League" });
+
+            int now = Find.TickManager != null ? Find.TickManager.TicksGame : 0;
+            // Force hostility so the synthetic pair reads as tense regardless of real relations.
+            var events = WorldMapChangeDetector.DetectBorderTension(snap, now, (a, b) => true);
+            ReportForced("border-tension", comp, events);
+        }
+
+        [DebugAction("RimSynapse", "WorldNews: force synthetic new-settlement event",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void ForceSettlementFoundedEvent()
+        {
+            var comp = Component();
+            if (comp == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] No world component."); return; }
+
+            var curr = new List<SettlementSnapshot> { new SettlementSnapshot {
+                key = "SynthSettlement-" + (Find.TickManager != null ? Find.TickManager.TicksGame : 0),
+                provinceId = -9003, regionName = "Glasswind Reach",
+                factionId = "SynthFounder", factionName = "the Pilgrims of Ossa" } };
+
+            int now = Find.TickManager != null ? Find.TickManager.TicksGame : 0;
+            var events = WorldMapChangeDetector.DetectSettlementsFounded(new HashSet<string>(), curr, now);
+            ReportForced("new-settlement", comp, events);
+        }
+
+        [DebugAction("RimSynapse", "WorldNews: force synthetic quest-outcome event",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void ForceQuestOutcomeEvent()
+        {
+            var comp = Component();
+            if (comp == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] No world component."); return; }
+
+            // A contested region so the news line names both the holder and a rival, and a failed
+            // outcome so the "came to nothing" branch is exercised.
+            var snap = new ProvinceSnapshot
+            {
+                provinceId = -9004, regionName = "Thornmarch", contested = true,
+                primaryOwnerId = "SynthHolder", primaryOwnerName = "the Marsh Wardens",
+            };
+            snap.contenderIds.AddRange(new[] { "SynthHolder", "SynthRival" });
+            snap.contenderNames.AddRange(new[] { "the Marsh Wardens", "the Dune Reavers" });
+
+            int now = Find.TickManager != null ? Find.TickManager.TicksGame : 0;
+            var e = RimSynapse.WorldNews.Quests.QuestNewsReactor.BuildQuestEvent(snap, "Break the Siege of Thornmarch", RimWorld.QuestEndOutcome.Fail, now);
+            ReportForced("quest-outcome", comp, e != null ? new List<WorldNewsEvent> { e } : new List<WorldNewsEvent>());
+        }
+
+        // ---- Settlement affairs + short-term relations -------------------------------------------
+
+        /// <summary>Distinct non-player factions that actually own a settlement — the real population
+        /// affairs happen to. Sourced from world objects so the debug path uses the same faction set the
+        /// live beat does.</summary>
+        private static List<Faction> SettlementOwningFactions()
+        {
+            var result = new List<Faction>();
+            var settlements = Find.WorldObjects?.Settlements;
+            if (settlements == null) return result;
+            foreach (var s in settlements)
+            {
+                Faction f = s?.Faction;
+                if (f != null && !f.IsPlayer && !result.Contains(f)) result.Add(f);
+            }
+            return result;
+        }
+
+        [DebugAction("RimSynapse", "WorldNews: force settlement affair (real factions, conflict)",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void ForceSettlementAffair()
+        {
+            var comp = Component();
+            if (comp == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] No world component."); return; }
+
+            var owners = SettlementOwningFactions();
+            var allNpc = Find.FactionManager?.AllFactionsListForReading?.FindAll(f => f != null && !f.IsPlayer);
+            RimSynapse.SynapseLogger.Message(
+                $"[RimSynapse-WorldNews] Faction census: {owners.Count} settlement-owning NPC faction(s); " +
+                $"{allNpc?.Count ?? 0} non-player faction(s) total.");
+
+            Faction a = owners.Count > 0 ? owners[0] : null;
+            Faction b = owners.Count > 1 ? owners[1] : null;
+            if (a == null || b == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] Need two settlement-owning NPC factions."); return; }
+
+            var ctx = new AffairContext
+            {
+                settlementFactionId = a.GetUniqueLoadID(), settlementFactionName = a.Name,
+                rivalFactionId = b.GetUniqueLoadID(), rivalFactionName = b.Name,
+                regionName = "the Frontier",
+                nowTicks = Find.TickManager != null ? Find.TickManager.TicksGame : 0,
+            };
+
+            int before = a.GoodwillWith(b);
+            // Forced rolls: conflict (0 < 0.55), first conflict outcome (soured), magnitude 10 → delta -10.
+            AffairResult result = SettlementAffairGenerator.Adjudicate(ctx, 0f, 0f, 10);
+            comp.DebugApplyAffairResult(result);
+            int after = a.GoodwillWith(b);
+
+            RimSynapse.SynapseLogger.Message(
+                $"[RimSynapse-WorldNews] Forced settlement affair: {a.Name} vs {b.Name}. " +
+                $"Requested delta {result.relationDelta}, goodwill {before}→{after} (moved {after - before}). " +
+                $"Ledger now {comp.relationLedger.Count} pair(s).\n    news: {result.evt.ToNewsLine()}");
+        }
+
+        [DebugAction("RimSynapse", "WorldNews: dump short-term relation ledger",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void DumpRelationLedger()
+        {
+            var comp = Component();
+            if (comp == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] No world component."); return; }
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"[RimSynapse-WorldNews] Short-term relation ledger: {comp.relationLedger.Count} active nudge(s) " +
+                          $"(cap ±{RimSynapse.WorldNews.Relations.ShortTermRelationLedger.MaxOffset}, " +
+                          $"decays {RimSynapse.WorldNews.Relations.ShortTermRelationLedger.DecayStep}/day).");
+            var nudges = comp.relationLedger.Nudges;
+            for (int i = 0; i < nudges.Count; i++)
+            {
+                var n = nudges[i];
+                sb.AppendLine($"  [{i,2}] {FactionName(n.aId)} ↔ {FactionName(n.bId)} : offset {n.offset:+0;-0;0}");
+            }
+            RimSynapse.SynapseLogger.Message(sb.ToString());
+        }
+
+        [DebugAction("RimSynapse", "WorldNews: decay relations one day",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void DecayRelationsOneDay()
+        {
+            var comp = Component();
+            if (comp == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] No world component."); return; }
+            int remaining = comp.DebugDecayRelationsOneDay();
+            RimSynapse.SynapseLogger.Message(
+                $"[RimSynapse-WorldNews] Decayed short-term relations one day; {remaining} pair(s) still unwinding.");
+        }
+
+        private static string FactionName(string uniqueLoadId)
+        {
+            var all = Find.FactionManager?.AllFactionsListForReading;
+            if (all != null)
+                foreach (var f in all)
+                    if (f != null && f.GetUniqueLoadID() == uniqueLoadId) return f.Name;
+            return uniqueLoadId;
+        }
+
+        private static void ReportForced(string label, SynapseWorldNewsWorldComponent comp, List<WorldNewsEvent> events)
+        {
+            int recorded = 0;
+            var sb = new StringBuilder();
+            foreach (var e in events)
+            {
+                bool ok = comp.RecordWorldEvent(e);
+                if (ok) recorded++;
+                sb.AppendLine($"    {(ok ? "recorded" : "suppressed (dedup)")}: {e.ToNewsLine()}");
+            }
+            RimSynapse.SynapseLogger.Message(
+                $"[RimSynapse-WorldNews] Forced {label}: detector produced {events.Count}, {recorded} recorded " +
+                $"(feed now {comp.worldFeed.Count}, news queue {comp.unpublishedEvents.Count}).\n{sb}");
         }
     }
 }
