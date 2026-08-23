@@ -1,0 +1,6 @@
+# RimSynapse WorldNews — shipped assembly manifest
+# version: 0.9.0
+# commit:  4a2f587
+# format:  sha256sum — verify with 'verify-binaries.ps1' or 'sha256sum -c'
+e1e27af7b07eeedf5ce71a9255f0422816a6fc5849a483c6714e1b472044fa9d  Newtonsoft.Json.dll
+318ab50ae1e89afd72294ab87ddaef89035a1805dc9603559bcdbfa2d3150044  RimSynapseWorldNews.dll
