@@ -489,6 +489,57 @@ namespace RimSynapse.WorldNews.UI
             }
         }
 
+        // ---- Publication cadence (WorldNews#25) --------------------------------------------------
+
+        /// <summary>Debug-validation deliverable for WorldNews#25: the cadence state at a glance —
+        /// next cut, pending presentation, held draft, in-flight flag, queue depth.</summary>
+        [DebugAction("RimSynapse", "WorldNews: dump publication cadence (#25)",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void DumpPublicationCadence()
+        {
+            var comp = Component();
+            if (comp == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] No world component."); return; }
+
+            int now = Find.TickManager != null ? Find.TickManager.TicksGame : 0;
+            RimSynapse.SynapseLogger.Message(
+                $"[RimSynapse-WorldNews] Cadence: enabled={RimSynapseWorldNewsMod.Settings?.enableScheduledPublication}, " +
+                $"now={now}, nextCut={comp.DebugNextCutTick} ({(comp.DebugNextCutTick - now) / 2500f:0.0}h out), " +
+                $"presentAt={comp.DebugPresentTick}, heldDraft={comp.DebugHasDraft}, " +
+                $"inFlight={comp.DebugGenerationInFlight}, cutBatch={comp.DebugCutBatchCount}, " +
+                $"queue={comp.unpublishedEvents.Count}.");
+        }
+
+        /// <summary>Run the 10pm cut right now — the real <c>RunScheduledCut</c>: affairs day +
+        /// world sample at the deadline, then draft-or-skip by the event threshold. Watch the log for
+        /// the skip line (thin day) or the drafting line, then the settle.</summary>
+        [DebugAction("RimSynapse", "WorldNews: force 10pm cut now (#25)",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void ForceScheduledCutNow()
+        {
+            var comp = Component();
+            if (comp == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] No world component."); return; }
+            comp.RunScheduledCut();
+        }
+
+        /// <summary>Present the held draft right now instead of waiting for noon. No-op (logged) when
+        /// nothing is drafted.</summary>
+        [DebugAction("RimSynapse", "WorldNews: force noon present now (#25)",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void ForceNoonPresentNow()
+        {
+            var comp = Component();
+            if (comp == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] No world component."); return; }
+            if (!comp.DebugHasDraft)
+            {
+                RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] No held draft to present (cut not run, still drafting, or the day was skipped).");
+                return;
+            }
+            comp.PresentDraftNow();
+        }
+
         // ---- Affairs timer (WorldNews#36) --------------------------------------------------------
 
         /// <summary>Debug-validation deliverable for WorldNews#36: shows when the next settlement-affairs

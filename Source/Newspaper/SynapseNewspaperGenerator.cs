@@ -19,9 +19,47 @@ namespace RimSynapse.WorldNews.Newspaper
         /// </param>
         public static void Generate(List<string> unpublishedEvents, Action onFinished = null)
         {
+            GenerateDraft(unpublishedEvents, (issue, issueJson) =>
+            {
+                if (issue == null)
+                {
+                    onFinished?.Invoke();
+                    return;
+                }
+
+                // Legacy immediate-publish path (threshold trigger, debug actions): hold publication
+                // until illustrations arrive (WorldNews#23) when the issue wants pictures. The
+                // scheduled cadence (WorldNews#25) does NOT use this — its noon presentation goes out
+                // with whatever assets are ready, so it calls GenerateDraft directly.
+                if (NewspaperImagePipeline.WillFetch(issue))
+                {
+                    NewspaperImagePipeline.ResolveAndAwait(issue, () =>
+                    {
+                        PublishIssue(issue, issueJson);
+                        onFinished?.Invoke();
+                    });
+                }
+                else
+                {
+                    PublishIssue(issue, issueJson);
+                    onFinished?.Invoke();
+                }
+            });
+        }
+
+        /// <summary>
+        /// Draft an issue from a batch of events WITHOUT publishing it. <paramref name="onSettled"/>
+        /// is invoked on the main thread exactly once, however the request settles: with the parsed
+        /// issue and its extracted JSON on success, or with <c>(null, null)</c> on request failure,
+        /// parse failure, or unpublishable content — the caller decides what publication and failure
+        /// recovery look like (the scheduled cadence holds the draft for its noon beat and rolls the
+        /// event batch back on failure; the legacy path publishes immediately).
+        /// </summary>
+        public static void GenerateDraft(List<string> unpublishedEvents, Action<NewspaperIssue, string> onSettled)
+        {
             if (unpublishedEvents == null || unpublishedEvents.Count == 0)
             {
-                onFinished?.Invoke();
+                onSettled?.Invoke(null, null);
                 return;
             }
 
@@ -84,7 +122,7 @@ Write the newspaper issue based on these events.";
                     if (!result.success)
                     {
                         RimSynapse.SynapseLogger.Warn("worldnews", $"[RimSynapse-WorldNews] Newspaper request failed: {result.content}");
-                        onFinished?.Invoke();
+                        onSettled?.Invoke(null, null);
                         return;
                     }
 
@@ -100,28 +138,12 @@ Write the newspaper issue based on these events.";
                     if (!HasPublishableContent(issue))
                     {
                         RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] Newspaper skipped — no publishable content this cycle.");
-                        onFinished?.Invoke();
+                        onSettled?.Invoke(null, null);
                         return;
                     }
 
                     string issueJson = RimSynapse.Utils.JsonHelper.ExtractJson(result.content);
-
-                    // Hold publication until illustrations arrive (WorldNews#23): when images are enabled
-                    // and the issue wants pictures, fetch them first and publish once they land. A declined
-                    // fetch (4xx) or a timeout publishes text-only rather than waiting forever.
-                    if (NewspaperImagePipeline.WillFetch(issue))
-                    {
-                        NewspaperImagePipeline.ResolveAndAwait(issue, () =>
-                        {
-                            PublishIssue(issue, issueJson);
-                            onFinished?.Invoke();
-                        });
-                    }
-                    else
-                    {
-                        PublishIssue(issue, issueJson);
-                        onFinished?.Invoke();
-                    }
+                    onSettled?.Invoke(issue, issueJson);
                 },
                 new RimSynapse.ChatOptions { priority = 5, requestName = "Newspaper Generation" }
             );
@@ -138,8 +160,9 @@ Write the newspaper issue based on these events.";
             return false;
         }
 
-        /// <summary>Send the "Newspaper Published" letter and broadcast its perception deltas.</summary>
-        private static void PublishIssue(NewspaperIssue issue, string issueJson)
+        /// <summary>Send the "Newspaper Published" letter and broadcast its perception deltas.
+        /// Internal so the scheduled cadence (WorldNews#25) can present a held draft at its noon beat.</summary>
+        internal static void PublishIssue(NewspaperIssue issue, string issueJson)
         {
             // The source JSON travels on the letter so it survives a save/reload; store the extracted
             // JSON (pre house-ad), since ParseIssue re-adds the house ad on read.

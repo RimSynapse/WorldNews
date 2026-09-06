@@ -72,6 +72,40 @@ namespace RimSynapse.WorldNews
 
         private int lastIssueTick = -99999;
 
+        // ---- Publication cadence (WorldNews#25) --------------------------------------------------
+
+        /// <summary>The two beats of the daily cadence: events are cut and drafting starts at 10pm,
+        /// and the finished issue is presented at noon the next day — the overnight window is the
+        /// pipeline's settle time for text and assets.</summary>
+        private const int CutHour = 22;
+        private const int PresentHour = 12;
+
+        /// <summary>A cut needs at least this many queued events to be worth waking the editor —
+        /// "event-driven, not calendrical": a quiet day produces no issue, and its trickle of events
+        /// stays queued toward tomorrow's cut.</summary>
+        private const int MinEventsForCut = 2;
+
+        /// <summary>Absolute tick of the next 10pm cut. Scribed, so the cadence keeps its rhythm
+        /// across save/load; ≤ 0 means "not yet scheduled" (new game or pre-cadence save).</summary>
+        private int nextCutTick;
+
+        /// <summary>Absolute tick of the pending noon presentation; 0 when nothing is drafted.</summary>
+        private int presentTick;
+
+        /// <summary>The drafted issue awaiting its noon beat, as the extracted JSON (the same payload
+        /// the letter carries), so a held draft survives save/load; re-parsed on presentation through
+        /// the single parse path. Null/empty when nothing is held.</summary>
+        private string draftedIssueJson;
+
+        /// <summary>Parsed twin of <see cref="draftedIssueJson"/> for the common no-reload case, so
+        /// presentation does not re-parse. Never scribed; rebuilt from the JSON after a load.</summary>
+        private NewspaperIssue draftedIssue;
+
+        /// <summary>The event batch handed to the in-flight draft. Scribed so a save mid-draft does
+        /// not lose the day's news: an in-flight request never survives a load, so on load a non-empty
+        /// batch (with nothing drafted) rolls back into the queue. Also the failure roll-over source.</summary>
+        private List<string> cutBatch = new List<string>();
+
         /// <summary>
         /// True while a generation request is in flight. Deliberately not saved: an issue still
         /// generating when the game was saved is never coming back, and persisting the flag would
@@ -108,6 +142,19 @@ namespace RimSynapse.WorldNews
                 // with no scribed countdown (new game, or pre-fix save) gets seeded — a few hours out,
                 // so a fresh colony hears frontier news on day one.
                 if (nextAffairsTick <= 0) nextAffairsTick = nowTick + WorldSampleInterval;
+
+                // Cadence bootstrap + crash recovery (WorldNews#25): schedule the first cut, restore a
+                // held draft's parsed twin, and roll a lost in-flight batch back into the queue — a
+                // request that was mid-air at save time is never coming back.
+                if (nextCutTick <= 0) nextCutTick = NextTickAtHour(CutHour, nowTick);
+                if (!string.IsNullOrEmpty(draftedIssueJson) && draftedIssue == null)
+                {
+                    draftedIssue = Newspaper.SynapseNewspaperGenerator.ParseIssue(draftedIssueJson);
+                }
+                if (cutBatch.Count > 0 && string.IsNullOrEmpty(draftedIssueJson))
+                {
+                    RollBatchBack("a newspaper draft was in flight when the game was saved");
+                }
             }
 
             int now = Find.TickManager?.TicksGame ?? 0;
@@ -116,10 +163,152 @@ namespace RimSynapse.WorldNews
                 nextWorldSampleTick = now + WorldSampleInterval;
                 SampleWorldMap();
             }
-            if (now >= nextAffairsTick)
+
+            if (ScheduledPublicationEnabled)
             {
+                if (now >= nextCutTick) RunScheduledCut();
+                if (presentTick > 0 && now >= presentTick && !string.IsNullOrEmpty(draftedIssueJson)) PresentDraftNow();
+            }
+            else if (now >= nextAffairsTick)
+            {
+                // Legacy day-beat: only when the cadence is off — the cut runs the affairs day itself
+                // (pull-at-deadline), and running both would double-roll and double-decay.
                 nextAffairsTick = now + DayTicks;
                 RunSettlementAffairsDay();
+            }
+        }
+
+        private static bool ScheduledPublicationEnabled =>
+            RimSynapseWorldNewsMod.Settings?.enableScheduledPublication ?? false;
+
+        /// <summary>
+        /// The absolute tick of the next time-of-day <paramref name="hour"/> (0–23) at the colony's
+        /// locale, at least one hour out. Hour-of-day comes from the first player home map's tile (the
+        /// world tick otherwise), so 10pm means the colony's 10pm across speeds and saves.
+        /// </summary>
+        private static int NextTickAtHour(int hour, int now)
+        {
+            int curHour = 12;
+            Map home = null;
+            List<Map> maps = Find.Maps;
+            if (maps != null)
+            {
+                for (int i = 0; i < maps.Count; i++)
+                {
+                    if (maps[i] != null && maps[i].IsPlayerHome) { home = maps[i]; break; }
+                }
+            }
+            try { curHour = home != null ? GenLocalDate.HourOfDay(home) : GenLocalDate.HourOfDay(0); }
+            catch { /* worldgen edge — keep the fallback hour */ }
+
+            int hoursAhead = (hour - curHour + 24) % 24;
+            if (hoursAhead == 0) hoursAhead = 24;
+            return now + hoursAhead * GenDate.TicksPerHour;
+        }
+
+        /// <summary>
+        /// The 10pm beat: schedule tomorrow's cut first (no failure path may stall the cadence), run
+        /// the day's world-news generation at the deadline (settlement affairs + a world-map sample),
+        /// then — with enough material and nothing already in flight — hand the queue to the drafter
+        /// and book the noon presentation.
+        /// </summary>
+        internal void RunScheduledCut()
+        {
+            int now = Find.TickManager != null ? Find.TickManager.TicksGame : 0;
+            nextCutTick = NextTickAtHour(CutHour, now);
+
+            // Pull-at-deadline: the freshest world content enters the pool right before drafting.
+            // RunSettlementAffairsDay also decays yesterday's relation nudges — the cut is the daily
+            // beat while the cadence owns publication.
+            RunSettlementAffairsDay();
+            SampleWorldMap();
+
+            if (generationInFlight || !string.IsNullOrEmpty(draftedIssueJson))
+            {
+                RimSynapse.SynapseLogger.Message(
+                    "[RimSynapse-WorldNews] 10pm cut: an issue is already in the pipeline — today's events roll to tomorrow.");
+                return;
+            }
+            if (unpublishedEvents.Count < MinEventsForCut)
+            {
+                RimSynapse.SynapseLogger.Message(
+                    $"[RimSynapse-WorldNews] 10pm cut: only {unpublishedEvents.Count} event(s) queued — no issue today (threshold {MinEventsForCut}).");
+                return;
+            }
+
+            cutBatch = new List<string>(unpublishedEvents);
+            unpublishedEvents.Clear();
+            generationInFlight = true;
+            lastIssueTick = now;
+            presentTick = NextTickAtHour(PresentHour, now);
+
+            RimSynapse.SynapseLogger.Message(
+                $"[RimSynapse-WorldNews] 10pm cut: drafting from {cutBatch.Count} event(s); presenting at the next noon (tick {presentTick}).");
+            Newspaper.SynapseNewspaperGenerator.GenerateDraft(cutBatch, OnDraftSettled);
+        }
+
+        private void OnDraftSettled(NewspaperIssue issue, string issueJson)
+        {
+            generationInFlight = false;
+
+            if (issue == null || string.IsNullOrEmpty(issueJson))
+            {
+                presentTick = 0;
+                RollBatchBack("the draft failed or had no publishable content");
+                return;
+            }
+
+            cutBatch.Clear();
+            draftedIssue = issue;
+            draftedIssueJson = issueJson;
+
+            // Start asset fetches now — the overnight window is their settle time. Presentation does
+            // NOT wait for them: at noon the paper goes out with whatever resolved, text as the floor,
+            // and later arrivals live on in the prompt-keyed cache for when the paper is opened.
+            Newspaper.NewspaperImagePipeline.Resolve(issue);
+
+            int now = Find.TickManager != null ? Find.TickManager.TicksGame : 0;
+            if (presentTick <= 0 || now >= presentTick)
+            {
+                // The clock already passed noon (a very slow draft, or a load ate the window): a late
+                // edition beats no edition.
+                PresentDraftNow();
+            }
+        }
+
+        /// <summary>Present the held draft now: the "Newspaper Published" letter goes out through the
+        /// same publish path the legacy trigger uses.</summary>
+        internal void PresentDraftNow()
+        {
+            if (string.IsNullOrEmpty(draftedIssueJson)) return;
+
+            NewspaperIssue issue = draftedIssue ?? Newspaper.SynapseNewspaperGenerator.ParseIssue(draftedIssueJson);
+            string json = draftedIssueJson;
+            draftedIssue = null;
+            draftedIssueJson = null;
+            presentTick = 0;
+
+            if (issue == null)
+            {
+                RimSynapse.SynapseLogger.Warn("worldnews", "[RimSynapse-WorldNews] Held draft failed to re-parse at noon; dropped.");
+                return;
+            }
+            Newspaper.SynapseNewspaperGenerator.PublishIssue(issue, json);
+        }
+
+        /// <summary>Return an unconsumed cut batch to the head of the queue (bounded by the cap), so a
+        /// failed or abandoned draft never costs the colony its day of news.</summary>
+        private void RollBatchBack(string why)
+        {
+            if (cutBatch.Count == 0) return;
+            RimSynapse.SynapseLogger.Message(
+                $"[RimSynapse-WorldNews] Rolling {cutBatch.Count} event(s) back into the queue — {why}.");
+            cutBatch.AddRange(unpublishedEvents);
+            unpublishedEvents = cutBatch;
+            cutBatch = new List<string>();
+            if (unpublishedEvents.Count > MaxQueuedEvents)
+            {
+                unpublishedEvents.RemoveRange(0, unpublishedEvents.Count - MaxQueuedEvents);
             }
         }
 
@@ -257,6 +446,11 @@ namespace RimSynapse.WorldNews
 
         // Debug hooks (used by DebugActions_WorldNews to exercise the affair path headlessly).
         internal int DebugNextAffairsTick => nextAffairsTick;
+        internal int DebugNextCutTick => nextCutTick;
+        internal int DebugPresentTick => presentTick;
+        internal bool DebugHasDraft => !string.IsNullOrEmpty(draftedIssueJson);
+        internal bool DebugGenerationInFlight => generationInFlight;
+        internal int DebugCutBatchCount => cutBatch.Count;
 
         /// <summary>Push the publish cooldown out from "now", so a debug action can pump events through
         /// the queue and count them without TryPublish firing a real generation mid-test.</summary>
@@ -384,6 +578,10 @@ namespace RimSynapse.WorldNews
             Scribe_Collections.Look(ref unpublishedEvents, "unpublishedEvents", LookMode.Value);
             Scribe_Values.Look(ref lastIssueTick, "lastIssueTick", -99999);
             Scribe_Values.Look(ref nextAffairsTick, "nextAffairsTick", 0);
+            Scribe_Values.Look(ref nextCutTick, "nextCutTick", 0);
+            Scribe_Values.Look(ref presentTick, "presentTick", 0);
+            Scribe_Values.Look(ref draftedIssueJson, "draftedIssueJson");
+            Scribe_Collections.Look(ref cutBatch, "cutBatch", LookMode.Value);
             Scribe_Deep.Look(ref worldFeed, "worldFeed");
             Scribe_Deep.Look(ref relationLedger, "relationLedger");
 
@@ -392,6 +590,7 @@ namespace RimSynapse.WorldNews
                 if (unpublishedEvents == null) unpublishedEvents = new List<string>();
                 if (worldFeed == null) worldFeed = new WorldMapChangeFeed();
                 if (relationLedger == null) relationLedger = new ShortTermRelationLedger();
+                if (cutBatch == null) cutBatch = new List<string>();
                 generationInFlight = false;
             }
         }
@@ -434,7 +633,9 @@ namespace RimSynapse.WorldNews
                 unpublishedEvents.RemoveRange(0, unpublishedEvents.Count - MaxQueuedEvents);
             }
 
-            TryPublish();
+            // Under the scheduled cadence (WorldNews#25) events only accumulate here — the 10pm cut
+            // decides publication. The threshold trigger is the legacy path when the cadence is off.
+            if (!ScheduledPublicationEnabled) TryPublish();
         }
 
         /// <summary>Publish only with enough news, nothing already generating, and enough time elapsed.</summary>

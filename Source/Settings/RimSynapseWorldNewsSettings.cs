@@ -35,6 +35,10 @@ namespace RimSynapse.WorldNews
         /// Independent of the world-map feed — it needs no Regions and Territories.</summary>
         public bool enableSettlementAffairs = true;
 
+        /// <summary>The publication cadence (WorldNews#25): a 10pm event-cut and a noon presentation,
+        /// replacing the old "4 queued events" trigger. Off → the legacy threshold trigger returns.</summary>
+        public bool enableScheduledPublication = true;
+
         // --- Breaking-news banner placement (movable/resizable/collapsible; -1 = use default) ---
         public float bannerX = -1f;
         public float bannerY = -1f;
@@ -54,6 +58,7 @@ namespace RimSynapse.WorldNews
             Scribe_Values.Look(ref detectIdeologyShift, "detectIdeologyShift", false);
             Scribe_Values.Look(ref detectQuestOutcomes, "detectQuestOutcomes", true);
             Scribe_Values.Look(ref enableSettlementAffairs, "enableSettlementAffairs", true);
+            Scribe_Values.Look(ref enableScheduledPublication, "enableScheduledPublication", true);
             Scribe_Values.Look(ref bannerX, "bannerX", -1f);
             Scribe_Values.Look(ref bannerY, "bannerY", -1f);
             Scribe_Values.Look(ref bannerW, "bannerW", 640f);
