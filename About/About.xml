@@ -4,7 +4,7 @@
     <author>RimSynapse Team</author>
     <packageId>RimSynapse.WorldNews</packageId>
     <url>https://github.com/RimSynapse/WorldNews</url>
-    <modVersion>0.9.0</modVersion>
+    <modVersion>0.10.0</modVersion>
     <supportedVersions>
         <li>1.5</li>
         <li>1.6</li>
@@ -28,7 +28,7 @@
     </loadAfter>
     <description>
 Discord Community: https://discord.gg/eVBebZ2N9s
-Version: v0.9.0 (Target: RimWorld 1.6)
+Version: v0.10.0-rc1 (Target: RimWorld 1.6)
 
 RimSynapse - WorldNews
 
@@ -39,6 +39,12 @@ Makes the RimWorld feel alive, reactive, and historically grounded by acting as 
 0.10 - Cross-Mod Capability Passes: event-driven publication cadence, on-demand news tools for the LLM, comms-console delivery, and another pass over how the news draws on every module.
 Future - Ideological artefacts abroad: the article, the conversion, and the war it might start (awaiting a regional belief model).
 These ship when they are ready - no dates.
+
+--- Changelog (v0.10.0-rc1) - Stabilization ---
+- A release candidate on the road to 0.10.0: bug fixes and stability ahead of the Cross-Mod Capability Passes feature work.
+- FIX - Newspaper dates no longer throw an out-of-range error a few days into a save; world events and gossip are timestamped correctly again.
+- FIX - Deferred letters are recorded into the newspaper exactly once, so the same story no longer repeats across issues.
+- FIX - Settlement affairs fire reliably again - non-player colonies produce news - and the daily timer now survives save/load with a day-one seed.
 
 --- Changelog (v0.9.0) - The Newspaper Reports the World ---
 - NEW - World-map news: the newspaper now reports changes across the planet, not just your colony - regions changing hands, new settlements founded, and rising tension between hostile neighbours who share a frontier (with Regions and Territories).

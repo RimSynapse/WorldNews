@@ -8,13 +8,16 @@ namespace RimSynapse.WorldNews.Patches
     [HarmonyPatch(new[] { typeof(Letter), typeof(string), typeof(int), typeof(bool) })]
     public static class LetterStack_ReceiveLetter_Patch
     {
-        public static void Postfix(Letter let)
+        public static void Postfix(Letter let, bool __runOriginal)
         {
             if (let == null) return;
-            
-            // Skip letters that are just minor notifications if desired, 
-            // but for now let's capture everything and let the WorldComponent filter or queue them.
-            
+
+            // Postfixes run even when a prefix cancels the original. Core's deferred-news prefix
+            // holds deferrable letters (returns false) and re-injects them on release; recording here
+            // while the original was skipped would put the same letter in the paper twice — once at
+            // intercept, once at release (WorldNews#35). Only record letters actually delivered.
+            if (!__runOriginal) return;
+
             var worldComp = Find.World?.GetComponent<SynapseWorldNewsWorldComponent>();
             if (worldComp != null)
             {

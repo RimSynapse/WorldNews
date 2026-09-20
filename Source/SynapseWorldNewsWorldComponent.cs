@@ -102,7 +102,12 @@ namespace RimSynapse.WorldNews
                 generationInFlight = false;
                 // First sample one interval out, so a freshly-loaded world isn't diffed on tick one.
                 nextWorldSampleTick = nowTick + WorldSampleInterval;
-                nextAffairsTick = nowTick + DayTicks;
+                // The affairs countdown is scribed: resetting it here on every load meant a full
+                // uninterrupted in-game day had to pass inside ONE session before the first roll, so
+                // under normal save/load play affairs never fired at all (WorldNews#36). Only a world
+                // with no scribed countdown (new game, or pre-fix save) gets seeded — a few hours out,
+                // so a fresh colony hears frontier news on day one.
+                if (nextAffairsTick <= 0) nextAffairsTick = nowTick + WorldSampleInterval;
             }
 
             int now = Find.TickManager?.TicksGame ?? 0;
@@ -251,6 +256,15 @@ namespace RimSynapse.WorldNews
         }
 
         // Debug hooks (used by DebugActions_WorldNews to exercise the affair path headlessly).
+        internal int DebugNextAffairsTick => nextAffairsTick;
+
+        /// <summary>Push the publish cooldown out from "now", so a debug action can pump events through
+        /// the queue and count them without TryPublish firing a real generation mid-test.</summary>
+        internal void DebugHoldPublishing()
+        {
+            lastIssueTick = Find.TickManager != null ? Find.TickManager.TicksGame : 0;
+        }
+
         internal bool DebugApplyAffairResult(AffairResult result)
         {
             bool recorded = RecordWorldEvent(result.evt);
@@ -369,6 +383,7 @@ namespace RimSynapse.WorldNews
             base.ExposeData();
             Scribe_Collections.Look(ref unpublishedEvents, "unpublishedEvents", LookMode.Value);
             Scribe_Values.Look(ref lastIssueTick, "lastIssueTick", -99999);
+            Scribe_Values.Look(ref nextAffairsTick, "nextAffairsTick", 0);
             Scribe_Deep.Look(ref worldFeed, "worldFeed");
             Scribe_Deep.Look(ref relationLedger, "relationLedger");
 
@@ -459,7 +474,15 @@ namespace RimSynapse.WorldNews
         {
             var tm = Find.TickManager;
             if (tm == null) return "[unknown date]";
-            return $"[{GenLocalDate.Twelfth(tm.TicksGame)}, {GenLocalDate.Year(tm.TicksGame)}]";
+            // GenLocalDate.Twelfth/Year take a Map/Thing/tile, NOT ticks — passing tm.TicksGame
+            // implicitly converts it to a PlanetTile and reads an out-of-range tile once ticks
+            // exceed the planet's tile count (~day 5). Use GenDate's ticks overloads at longitude 0
+            // for a planetary (mapless) date stamp.
+            return $"[{GenDate.Twelfth(tm.TicksAbs, 0f)}, {GenDate.Year(tm.TicksAbs, 0f)}]";
         }
+
+        /// <summary>Debug-only accessor for the private date stamp — lets the debug-validation action
+        /// exercise the exact string the letter/world-event recording paths build.</summary>
+        internal static string DebugDateStamp() => DateStamp();
     }
 }

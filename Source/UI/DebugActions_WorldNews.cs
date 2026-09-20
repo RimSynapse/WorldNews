@@ -428,6 +428,143 @@ namespace RimSynapse.WorldNews.UI
             ReportForced("quest-outcome", comp, e != null ? new List<WorldNewsEvent> { e } : new List<WorldNewsEvent>());
         }
 
+        // ---- Deferred-news recording (WorldNews#35) ----------------------------------------------
+
+        /// <summary>
+        /// Debug-validation deliverable for WorldNews#35: proves a deferred letter enters the newspaper
+        /// queue exactly once. Sends a synthetic deferrable letter through the real
+        /// <c>LetterStack.ReceiveLetter</c> path; with Core's deferral on, the intercept must record
+        /// NOTHING (the postfix sees __runOriginal=false), and force-releasing must record it exactly
+        /// once. With deferral off the letter passes straight through and records once immediately.
+        /// Logs PASS/FAIL either way.
+        /// </summary>
+        [DebugAction("RimSynapse", "WorldNews: TEST deferred letter records once (#35)",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void TestDeferredLetterRecordsOnce()
+        {
+            var comp = Component();
+            var mgr = RimSynapse.SynapseDeferredNewsComponent.Instance;
+            if (comp == null || mgr == null)
+            {
+                RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] #35 TEST aborted: missing world component or deferred-news manager.");
+                return;
+            }
+
+            comp.DebugHoldPublishing(); // keep TryPublish from consuming the queue mid-count
+
+            int queue0 = comp.unpublishedEvents.Count;
+            int pending0 = mgr.Pending.Count;
+
+            Letter let = LetterMaker.MakeLetter(
+                "Synapse #35 test dispatch",
+                "A synthetic deferrable letter, sent by the #35 debug validation.",
+                LetterDefOf.NeutralEvent);
+            let.ID = Find.UniqueIDsManager.GetNextLetterID();
+            Find.LetterStack.ReceiveLetter(let);
+
+            int queue1 = comp.unpublishedEvents.Count;
+            int pending1 = mgr.Pending.Count;
+
+            if (pending1 > pending0)
+            {
+                // Deferred path: intercept must have recorded nothing.
+                bool interceptClean = queue1 == queue0;
+                int released = pending1;
+                mgr.DebugReleaseAllNow();
+                int queue2 = comp.unpublishedEvents.Count;
+                bool releaseOnce = queue2 == queue1 + released;
+                RimSynapse.SynapseLogger.Message(
+                    $"[RimSynapse-WorldNews] #35 TEST (deferred path): queue {queue0}→{queue1} on intercept " +
+                    $"({(interceptClean ? "clean" : "LEAKED " + (queue1 - queue0))}), released {released} held letter(s), " +
+                    $"queue →{queue2} (expected {queue1 + released}). " +
+                    $"{(interceptClean && releaseOnce ? "PASS" : "FAIL")}");
+            }
+            else
+            {
+                // Deferral off/immediate: the letter should have recorded exactly once on the spot.
+                RimSynapse.SynapseLogger.Message(
+                    $"[RimSynapse-WorldNews] #35 TEST (pass-through path, deferral off or 0-day): " +
+                    $"queue {queue0}→{queue1} (expected {queue0 + 1}). {(queue1 == queue0 + 1 ? "PASS" : "FAIL")}");
+            }
+        }
+
+        // ---- Affairs timer (WorldNews#36) --------------------------------------------------------
+
+        /// <summary>Debug-validation deliverable for WorldNews#36: shows when the next settlement-affairs
+        /// roll is due. On a session with no scribed countdown it must sit a quarter-day out (15000
+        /// ticks), not a full day; after the fix the scribed value survives save/load instead of
+        /// resetting every session.</summary>
+        [DebugAction("RimSynapse", "WorldNews: dump affairs timer (#36)",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void DumpAffairsTimer()
+        {
+            var comp = Component();
+            if (comp == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] No world component."); return; }
+
+            int now = Find.TickManager != null ? Find.TickManager.TicksGame : 0;
+            int next = comp.DebugNextAffairsTick;
+            RimSynapse.SynapseLogger.Message(
+                $"[RimSynapse-WorldNews] Affairs timer: now={now}, nextAffairsTick={next} " +
+                $"({(next - now) / 2500f:0.0} in-game hour(s) out). " +
+                $"Settings: enableSettlementAffairs={RimSynapseWorldNewsMod.Settings?.enableSettlementAffairs}.");
+        }
+
+        /// <summary>Run the live once-a-day settlement-affairs beat right now — the real
+        /// <c>RunSettlementAffairsDay</c>, not a forced adjudication — and report what it produced.</summary>
+        [DebugAction("RimSynapse", "WorldNews: run settlement-affairs day now",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void RunSettlementAffairsDayNow()
+        {
+            var comp = Component();
+            if (comp == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] No world component."); return; }
+
+            comp.DebugHoldPublishing(); // count what the beat queues without publishing mid-report
+            int feed0 = comp.worldFeed.Count;
+            int queue0 = comp.unpublishedEvents.Count;
+            comp.RunSettlementAffairsDay();
+            RimSynapse.SynapseLogger.Message(
+                $"[RimSynapse-WorldNews] Affairs day ran: feed {feed0}→{comp.worldFeed.Count}, " +
+                $"news queue {queue0}→{comp.unpublishedEvents.Count}, ledger {comp.relationLedger.Count} pair(s). " +
+                $"(Chance is 10%/settlement — 0 events on a small world is a legitimate roll.)");
+        }
+
+        // ---- Date stamp (tile-overload crash fix) ------------------------------------------------
+
+        /// <summary>
+        /// Debug-validation deliverable for the date-stamp fix: <c>DateStamp()</c> once called
+        /// <c>GenLocalDate.Twelfth/Year(ticks)</c>, which has no ticks overload — the tick count was
+        /// implicitly cast to a PlanetTile and read an out-of-range tile past ~day 5, logging
+        /// "Attempted to access a tile ... out of range" from the letter/world-event recording paths.
+        /// This exercises the live stamp AND a far-future tick value (60 years out, far beyond any
+        /// planet's tile count) to prove the new <c>GenDate</c> overloads are tile-independent.
+        /// PASS = both stamps well-formed AND no out-of-range tile error accompanies this log line.
+        /// </summary>
+        [DebugAction("RimSynapse", "WorldNews: TEST date stamp (no tile out-of-range)",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void TestDateStampNoTileOutOfRange()
+        {
+            var tm = Find.TickManager;
+            if (tm == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] date-stamp TEST aborted: no TickManager."); return; }
+
+            string liveStamp = SynapseWorldNewsWorldComponent.DebugDateStamp();
+
+            // The regime that used to crash: ticks well beyond the planet's tile count.
+            long farTicks = tm.TicksAbs + 60L * GenDate.TicksPerYear;
+            int tileCount = Find.WorldGrid?.TilesCount ?? -1;
+            string farStamp = $"[{GenDate.Twelfth(farTicks, 0f)}, {GenDate.Year(farTicks, 0f)}]";
+
+            bool wellFormed = !string.IsNullOrEmpty(liveStamp) && liveStamp != "[unknown date]"
+                              && GenDate.Year(farTicks, 0f) > 0;
+            RimSynapse.SynapseLogger.Message(
+                $"[RimSynapse-WorldNews] date-stamp TEST: live={liveStamp} (ticksAbs={tm.TicksAbs}), " +
+                $"far+60y={farStamp} (ticks={farTicks} >> tileCount={tileCount}). " +
+                $"{(wellFormed ? "PASS" : "FAIL")} — PASS only if NO \"tile ... out of range\" error sits beside this line.");
+        }
+
         // ---- Settlement affairs + short-term relations -------------------------------------------
 
         /// <summary>Distinct non-player factions that actually own a settlement — the real population
