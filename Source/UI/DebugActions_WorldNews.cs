@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json;
 using LudeonTK;
 using RimWorld;
 using Verse;
@@ -627,6 +629,88 @@ namespace RimSynapse.WorldNews.UI
                 foreach (var f in all)
                     if (f != null && f.GetUniqueLoadID() == uniqueLoadId) return f.Name;
             return uniqueLoadId;
+        }
+
+        // ---- Agent tools (WorldNews#1 / #2) ------------------------------------------------------
+
+        /// <summary>
+        /// Debug-validation deliverable for WorldNews#1: exercises get_planetary_news_feed through the
+        /// real <c>SynapseToolRegistry.ExecuteTool</c> path (proving registration too). Seeds three
+        /// synthetic events, asserts the tool returns them newest-first, that maxEvents caps the result,
+        /// that {"maxEvents":0} yields an empty array, and that the queue is UNCHANGED afterwards
+        /// (read-only). Restores the queue to its pre-test length either way. Logs PASS/FAIL.
+        /// </summary>
+        [DebugAction("RimSynapse", "WorldNews: TEST get_planetary_news_feed (#1)",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void TestGetPlanetaryNewsFeed()
+        {
+            var comp = Component();
+            if (comp == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] #1 TEST aborted: no world component."); return; }
+
+            comp.DebugHoldPublishing(); // never publish mid-test
+            int before = comp.unpublishedEvents.Count;
+            // Add directly (not via RecordEvent) so no publish/generation is provoked by the seeding.
+            comp.unpublishedEvents.Add("[First, 5500] Raid: pirates struck the eastern watchtower.");
+            comp.unpublishedEvents.Add("[Second, 5500] Trade: a caravan from the Kanou Tribe arrived.");
+            comp.unpublishedEvents.Add("[Third, 5500] Gossip: rumours of a warlord massing troops.");
+
+            try
+            {
+                string all = SynapseToolRegistry.ExecuteTool("get_planetary_news_feed", "{}");
+                var parsed = JsonConvert.DeserializeObject<List<Dictionary<string, string>>>(all);
+                bool gotThree = parsed != null && parsed.Count >= 3;
+                // Newest-first: our last-added ("Gossip") must lead.
+                bool newestFirst = gotThree && parsed[0].TryGetValue("label", out var lbl0) && lbl0 == "Gossip";
+
+                string capped = SynapseToolRegistry.ExecuteTool("get_planetary_news_feed", "{\"maxEvents\":2}");
+                var cappedList = JsonConvert.DeserializeObject<List<object>>(capped);
+                bool capOk = cappedList != null && cappedList.Count == 2;
+
+                string zero = SynapseToolRegistry.ExecuteTool("get_planetary_news_feed", "{\"maxEvents\":0}");
+                var zeroList = JsonConvert.DeserializeObject<List<object>>(zero);
+                bool zeroOk = zeroList != null && zeroList.Count == 0;
+
+                bool queueIntact = comp.unpublishedEvents.Count == before + 3;
+
+                RimSynapse.SynapseLogger.Message(
+                    $"[RimSynapse-WorldNews] #1 TEST get_planetary_news_feed: returned {parsed?.Count ?? -1} " +
+                    $"(newest-first={newestFirst}), maxEvents:2→{cappedList?.Count ?? -1} ({capOk}), " +
+                    $"maxEvents:0→{zeroList?.Count ?? -1} ({zeroOk}), queue read-only={queueIntact}. " +
+                    $"{(gotThree && newestFirst && capOk && zeroOk && queueIntact ? "PASS" : "FAIL")}\n    first item: {(gotThree ? all.Substring(0, Math.Min(all.Length, 200)) : "(none)")}");
+            }
+            finally
+            {
+                // Remove exactly what we added, restoring the queue.
+                if (comp.unpublishedEvents.Count >= before + 3)
+                    comp.unpublishedEvents.RemoveRange(comp.unpublishedEvents.Count - 3, 3);
+            }
+        }
+
+        /// <summary>
+        /// Debug-validation deliverable for WorldNews#2: runs get_local_settlements_status through
+        /// <c>ExecuteTool</c> and logs the JSON. On a live world with NPC settlements it should return a
+        /// nearest-first array with positive distances and a relation per settlement; the maxTiles:0 call
+        /// proves the radius filter empties it. Cross-checks the count against the live settlement list.
+        /// </summary>
+        [DebugAction("RimSynapse", "WorldNews: TEST get_local_settlements_status (#2)",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void TestGetLocalSettlementsStatus()
+        {
+            string all = SynapseToolRegistry.ExecuteTool("get_local_settlements_status", "{}");
+            string bounded = SynapseToolRegistry.ExecuteTool("get_local_settlements_status", "{\"maxTiles\":0}");
+
+            var list = JsonConvert.DeserializeObject<List<Dictionary<string, object>>>(all);
+            var boundedList = JsonConvert.DeserializeObject<List<object>>(bounded);
+
+            int npcSettlements = Find.WorldObjects?.Settlements?.Count(s => s?.Faction != null && !s.Faction.IsPlayer) ?? 0;
+            bool boundedEmpty = boundedList != null && boundedList.Count == 0;
+
+            RimSynapse.SynapseLogger.Message(
+                $"[RimSynapse-WorldNews] #2 TEST get_local_settlements_status: returned {list?.Count ?? -1} of " +
+                $"{npcSettlements} NPC settlement(s); maxTiles:0→{boundedList?.Count ?? -1} (empty={boundedEmpty}). " +
+                $"{((list != null && boundedEmpty) ? "PASS" : "FAIL")}\n    json: {all.Substring(0, Math.Min(all.Length, 400))}");
         }
 
         private static void ReportForced(string label, SynapseWorldNewsWorldComponent comp, List<WorldNewsEvent> events)

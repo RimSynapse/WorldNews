@@ -26,6 +26,13 @@ namespace RimSynapse.WorldNews
             var harmony = new Harmony("rimsynapse.worldnews");
             harmony.PatchAll();
 
+            // Read-only agent tools (WorldNews#1/#2): register directly in the constructor — Core is a
+            // hard dependency and is already loaded, so SynapseToolRegistry is available, and this
+            // matches Conversations' house pattern (registering in the constructor, not deferred). It
+            // also means the "Registered tool …" confirmation lands in Player.log at startup, whereas
+            // messages from the ExecuteWhenFinished block below do not reliably surface there.
+            API.WorldNewsMcpTools.RegisterTools();
+
             LongEventHandler.ExecuteWhenFinished(() =>
             {
                 ModHandle = SynapseCore.Register(
