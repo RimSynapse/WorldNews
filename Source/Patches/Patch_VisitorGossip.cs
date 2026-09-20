@@ -17,8 +17,10 @@ namespace RimSynapse.WorldNews.Patches
             if (newsComp == null) return;
 
             var tm = Find.TickManager;
+            // GenLocalDate.Twelfth/Year take a tile, not ticks — passing ticks reads an
+            // out-of-range PlanetTile past ~day 5. Use GenDate at longitude 0 (planetary stamp).
             string stamp = tm != null
-                ? $"[{GenLocalDate.Twelfth(tm.TicksGame)}, {GenLocalDate.Year(tm.TicksGame)}]"
+                ? $"[{GenDate.Twelfth(tm.TicksAbs, 0f)}, {GenDate.Year(tm.TicksAbs, 0f)}]"
                 : "[unknown date]";
 
             // Through RecordEvent rather than touching the list and re-implementing the threshold:

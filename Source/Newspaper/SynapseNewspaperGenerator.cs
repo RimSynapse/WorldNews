@@ -198,12 +198,12 @@ Write the newspaper issue based on these events.";
             if (string.IsNullOrWhiteSpace(issue.PaperName)) issue.PaperName = DefaultPaperName;
             if (string.IsNullOrWhiteSpace(issue.Date))
             {
-                // Same proven ticks-overloads the WorldComponent's DateStamp uses (GenLocalDate's
-                // DayOfSeason/Season overloads need a Map/Thing/tile, not raw ticks). Only a rare
-                // fallback — the model normally supplies Date.
+                // GenLocalDate.Twelfth/Year need a Map/Thing/tile, not raw ticks — passing ticks
+                // reads an out-of-range PlanetTile past ~day 5. Use GenDate's ticks overloads at
+                // longitude 0. Only a rare fallback — the model normally supplies Date.
                 var tm = Verse.Find.TickManager;
                 issue.Date = tm != null
-                    ? $"Twelfth {RimWorld.GenLocalDate.Twelfth(tm.TicksGame)}, {RimWorld.GenLocalDate.Year(tm.TicksGame)}"
+                    ? $"Twelfth {RimWorld.GenDate.Twelfth(tm.TicksAbs, 0f)}, {RimWorld.GenDate.Year(tm.TicksAbs, 0f)}"
                     : "Unknown date";
             }
 
