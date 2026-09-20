@@ -531,6 +531,40 @@ namespace RimSynapse.WorldNews.UI
                 $"(Chance is 10%/settlement — 0 events on a small world is a legitimate roll.)");
         }
 
+        // ---- Date stamp (tile-overload crash fix) ------------------------------------------------
+
+        /// <summary>
+        /// Debug-validation deliverable for the date-stamp fix: <c>DateStamp()</c> once called
+        /// <c>GenLocalDate.Twelfth/Year(ticks)</c>, which has no ticks overload — the tick count was
+        /// implicitly cast to a PlanetTile and read an out-of-range tile past ~day 5, logging
+        /// "Attempted to access a tile ... out of range" from the letter/world-event recording paths.
+        /// This exercises the live stamp AND a far-future tick value (60 years out, far beyond any
+        /// planet's tile count) to prove the new <c>GenDate</c> overloads are tile-independent.
+        /// PASS = both stamps well-formed AND no out-of-range tile error accompanies this log line.
+        /// </summary>
+        [DebugAction("RimSynapse", "WorldNews: TEST date stamp (no tile out-of-range)",
+            actionType = DebugActionType.Action,
+            allowedGameStates = AllowedGameStates.PlayingOnMap | AllowedGameStates.PlayingOnWorld)]
+        private static void TestDateStampNoTileOutOfRange()
+        {
+            var tm = Find.TickManager;
+            if (tm == null) { RimSynapse.SynapseLogger.Message("[RimSynapse-WorldNews] date-stamp TEST aborted: no TickManager."); return; }
+
+            string liveStamp = SynapseWorldNewsWorldComponent.DebugDateStamp();
+
+            // The regime that used to crash: ticks well beyond the planet's tile count.
+            long farTicks = tm.TicksAbs + 60L * GenDate.TicksPerYear;
+            int tileCount = Find.WorldGrid?.TilesCount ?? -1;
+            string farStamp = $"[{GenDate.Twelfth(farTicks, 0f)}, {GenDate.Year(farTicks, 0f)}]";
+
+            bool wellFormed = !string.IsNullOrEmpty(liveStamp) && liveStamp != "[unknown date]"
+                              && GenDate.Year(farTicks, 0f) > 0;
+            RimSynapse.SynapseLogger.Message(
+                $"[RimSynapse-WorldNews] date-stamp TEST: live={liveStamp} (ticksAbs={tm.TicksAbs}), " +
+                $"far+60y={farStamp} (ticks={farTicks} >> tileCount={tileCount}). " +
+                $"{(wellFormed ? "PASS" : "FAIL")} — PASS only if NO \"tile ... out of range\" error sits beside this line.");
+        }
+
         // ---- Settlement affairs + short-term relations -------------------------------------------
 
         /// <summary>Distinct non-player factions that actually own a settlement — the real population

@@ -474,7 +474,15 @@ namespace RimSynapse.WorldNews
         {
             var tm = Find.TickManager;
             if (tm == null) return "[unknown date]";
-            return $"[{GenLocalDate.Twelfth(tm.TicksGame)}, {GenLocalDate.Year(tm.TicksGame)}]";
+            // GenLocalDate.Twelfth/Year take a Map/Thing/tile, NOT ticks — passing tm.TicksGame
+            // implicitly converts it to a PlanetTile and reads an out-of-range tile once ticks
+            // exceed the planet's tile count (~day 5). Use GenDate's ticks overloads at longitude 0
+            // for a planetary (mapless) date stamp.
+            return $"[{GenDate.Twelfth(tm.TicksAbs, 0f)}, {GenDate.Year(tm.TicksAbs, 0f)}]";
         }
+
+        /// <summary>Debug-only accessor for the private date stamp — lets the debug-validation action
+        /// exercise the exact string the letter/world-event recording paths build.</summary>
+        internal static string DebugDateStamp() => DateStamp();
     }
 }
