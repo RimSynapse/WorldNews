@@ -1,5 +1,5 @@
 [b]Discord Community:[/b] [url=https://discord.gg/eVBebZ2N9s]https://discord.gg/eVBebZ2N9s[/url]
-[b]Version:[/b] v0.10.0-rc1 (Target: RimWorld 1.6)
+[b]Version:[/b] v0.10.0 (Target: RimWorld 1.6)
 
 [h1]RimSynapse - WorldNews[/h1]
 [b][url=https://github.com/RimSynapse/WorldNews/wiki]Official Wiki and Documentation[/url][/b]
@@ -27,9 +27,9 @@ These ship when they are ready - no dates.
 
 ---
 
-[h2]Changelog (v0.10.0-rc1) - Stabilization[/h2]
+[h2]Changelog (v0.10.0) - Stabilization[/h2]
 [list]
-[*] A release candidate on the road to 0.10.0: bug fixes and stability ahead of the Cross-Mod Capability Passes feature work.
+[*] Bug fixes and stability for the 0.10.0 line, ahead of the Cross-Mod Capability Passes feature work.
 [*] FIX - Newspaper dates no longer throw an out-of-range error a few days into a save; world events and gossip are timestamped correctly again.
 [*] FIX - Deferred letters are recorded into the newspaper exactly once, so the same story no longer repeats across issues.
 [*] FIX - Settlement affairs fire reliably again - non-player colonies produce news - and the daily timer now survives save/load with a day-one seed.
