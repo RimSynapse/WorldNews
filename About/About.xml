@@ -28,7 +28,7 @@
     </loadAfter>
     <description>
 Discord Community: https://discord.gg/eVBebZ2N9s
-Version: v0.10.0-rc1 (Target: RimWorld 1.6)
+Version: v0.10.0 (Target: RimWorld 1.6)
 
 RimSynapse - WorldNews
 
@@ -40,8 +40,8 @@ Makes the RimWorld feel alive, reactive, and historically grounded by acting as 
 Future - Ideological artefacts abroad: the article, the conversion, and the war it might start (awaiting a regional belief model).
 These ship when they are ready - no dates.
 
---- Changelog (v0.10.0-rc1) - Stabilization ---
-- A release candidate on the road to 0.10.0: bug fixes and stability ahead of the Cross-Mod Capability Passes feature work.
+--- Changelog (v0.10.0) - Stabilization ---
+- Bug fixes and stability for the 0.10.0 line, ahead of the Cross-Mod Capability Passes feature work.
 - FIX - Newspaper dates no longer throw an out-of-range error a few days into a save; world events and gossip are timestamped correctly again.
 - FIX - Deferred letters are recorded into the newspaper exactly once, so the same story no longer repeats across issues.
 - FIX - Settlement affairs fire reliably again - non-player colonies produce news - and the daily timer now survives save/load with a day-one seed.
